@@ -1,0 +1,57 @@
+import mongoose, { Schema, Document, Model } from 'mongoose';
+
+export interface IProduct extends Document {
+  title: string;
+  slug: string;
+  price: number;
+  originalPrice?: number;
+  images: string[];
+  categories: string[];
+  description: string;
+  features: string[]; // e.g. ["Direct Fit", "CNC Metal", "Weatherproof"]
+  specs: {
+    sku: string;
+    material: string;
+    installation: string;
+  };
+  compatibility: {
+    brand: string;
+    model: string;
+    year: string;
+  }[];
+  rating: number;
+  numReviews: number;
+  inStock: boolean;
+}
+
+const productSchema = new Schema<IProduct>(
+  {
+    title: { type: String, required: true },
+    slug: { type: String, required: true, unique: true },
+    price: { type: Number, required: true },
+    originalPrice: { type: Number },
+    images: { type: [String], required: true },
+    categories: { type: [String], required: true },
+    description: { type: String, required: true },
+    features: { type: [String], default: [] },
+    specs: {
+      sku: { type: String },
+      material: { type: String },
+      installation: { type: String },
+    },
+    compatibility: [
+      {
+        brand: { type: String },
+        model: { type: String },
+        year: { type: String },
+      },
+    ],
+    rating: { type: Number, default: 0 },
+    numReviews: { type: Number, default: 0 },
+    inStock: { type: Boolean, default: true },
+  },
+  { timestamps: true }
+);
+
+const Product: Model<IProduct> = mongoose.models.Product || mongoose.model<IProduct>('Product', productSchema);
+export default Product;

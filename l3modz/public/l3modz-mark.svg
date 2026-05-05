@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="L3 logo mark">
+  <rect width="64" height="64" rx="10" fill="#111827" />
+  <text x="4" y="52" font-family="Segoe UI, Arial, sans-serif" font-size="52" font-weight="900" letter-spacing="0.5">
+    <tspan fill="#19e6d5">L</tspan><tspan fill="#ff2a2a">3</tspan>
+  </text>
+</svg>
