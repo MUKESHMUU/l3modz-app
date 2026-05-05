@@ -54,6 +54,50 @@ See `.env.example` for all required environment variables. You need to set up:
 
 ## Deploy on Vercel
 
+### 🎯 **Important: Monorepo Structure**
+
+Your project has both:
+
+- **`l3modz/`** - Complete Next.js full-stack app (frontend + API routes)
+- **`l3modz/frontend/`** - Separate React/Vite frontend
+
+**Recommendation: Deploy only the Next.js app** (`l3modz/`) - it's your complete application!
+
+### Option 1: Deploy Next.js Backend Only (Recommended)
+
+Your Next.js app is a complete full-stack application with both frontend pages and API routes.
+
+#### Steps:
+
+1. **Go to [Vercel Dashboard](https://vercel.com/dashboard)**
+2. **Click "New Project"**
+3. **Import your GitHub repository**
+4. **Configure the project**:
+   - **Framework Preset**: Next.js
+   - **Root Directory**: `l3modz` ⭐ **(This is crucial!)**
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `.next`
+5. **Add Environment Variables** (from `.env.example`)
+6. **Deploy**
+
+### Option 2: Deploy Frontend Separately
+
+If you want to deploy the React/Vite frontend (`l3modz/frontend/`) separately:
+
+#### For the Frontend:
+
+1. **Create a new Vercel project**
+2. **Set Root Directory**: `l3modz/frontend`
+3. **Framework Preset**: Vite
+4. **Build Command**: `npm run build`
+5. **Output Directory**: `dist`
+6. **Add environment variables** for API endpoints
+
+#### For the Backend:
+
+1. **Deploy Next.js app** as above
+2. **Update frontend** to point to deployed backend API URLs
+
 ### Step 1: Prerequisites
 
 1. **Create accounts** (if you don't have them):
@@ -103,7 +147,7 @@ See `.env.example` for all required environment variables. You need to set up:
 
 4. **Configure the project**:
    - **Framework Preset**: Next.js
-   - **Root Directory**: `l3modz` (if your repo has nested structure)
+   - **Root Directory**: `l3modz` ⭐ **(This is crucial for monorepo!)**
    - **Build Command**: `npm run build` (should be automatic)
    - **Output Directory**: `.next` (should be automatic)
 
