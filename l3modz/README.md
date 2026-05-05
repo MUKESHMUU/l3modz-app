@@ -52,67 +52,122 @@ See `.env.example` for all required environment variables. You need to set up:
 - **ShipRocket** for shipping
 - **JWT secrets** for authentication
 
-## Deploy on Vercel
+## Deployment: Vercel Frontend + Render Backend
 
-### 🎯 **Important: Monorepo Structure**
+### 🎯 **Architecture**
 
-Your project has both:
+- **Frontend**: React/Vite → Deployed on **Vercel**
+- **Backend**: Next.js API → Deployed on **Render**
+- **Database**: MongoDB Atlas
+- **External Services**: Razorpay, Cloudinary, ShipRocket
 
-- **`l3modz/`** - Complete Next.js full-stack app (frontend + API routes)
-- **`l3modz/frontend/`** - Separate React/Vite frontend
+### Step 1: Prerequisites
 
-### 🎯 **Deploy React Frontend (Vite)**
+1. **Create accounts**:
+   - [Vercel](https://vercel.com) - for frontend
+   - [Render](https://render.com) - for backend
+   - [MongoDB Atlas](https://cloud.mongodb.com) - database
+   - [Razorpay](https://razorpay.com) - payments
+   - [Cloudinary](https://cloudinary.com) - images
+   - [ShipRocket](https://shiprocket.in) - shipping
 
-Your React/Vite frontend is in `l3modz/frontend/` and needs to connect to your Next.js backend API.
+2. **Connect GitHub** to both Vercel and Render
 
-#### Steps:
+### Step 2: Set Up External Services
 
-1. **Go to [Vercel Dashboard](https://vercel.com/dashboard)**
-2. **Click "New Project"**
-3. **Import your GitHub repository**
-4. **Configure the project**:
-   - **Framework Preset**: Vite
-   - **Root Directory**: `l3modz/frontend` ⭐ **(This is crucial!)**
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
-5. **Add Environment Variables** (API endpoints)
-6. **Deploy**
+#### MongoDB Atlas
 
-### Option 1: Deploy Next.js Backend Only
+1. Go to [cloud.mongodb.com](https://cloud.mongodb.com)
+2. Create a new cluster
+3. Create a database user
+4. Get your connection string (looks like: `mongodb+srv://user:pass@cluster.mongodb.net/dbname`)
+5. Whitelist IP: `0.0.0.0/0` (or add specific IPs)
 
-Your Next.js app is a complete full-stack application with both frontend pages and API routes.
+#### Razorpay
 
-#### Steps:
+1. Create account at [razorpay.com](https://razorpay.com)
+2. Go to Dashboard > Settings > API Keys
+3. Copy **Key ID** and **Key Secret**
+4. Note: Use test keys for development, live keys for production
 
-1. **Go to [Vercel Dashboard](https://vercel.com/dashboard)**
-2. **Click "New Project"**
-3. **Import your GitHub repository**
-4. **Configure the project**:
-   - **Framework Preset**: Next.js
-   - **Root Directory**: `l3modz` ⭐ **(This is crucial!)**
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `.next`
-5. **Add Environment Variables** (from `.env.example`)
-6. **Deploy**
+#### Cloudinary
 
-If you want to deploy the **React/Vite frontend** (`l3modz/frontend/`):
+1. Create account at [cloudinary.com](https://cloudinary.com)
+2. Go to Dashboard
+3. Copy **Cloud Name**, **API Key**, **API Secret**
 
-#### Steps:
+#### ShipRocket
 
-1. **Go to [Vercel Dashboard](https://vercel.com/dashboard)**
-2. **Click "New Project"**
-3. **Import your GitHub repository**
-4. **Configure the project**:
-   - **Framework Preset**: Vite
-   - **Root Directory**: `l3modz/frontend` ⭐ **(This is crucial!)**
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
-5. **Add Environment Variables** (if needed for API calls)
-6. **Deploy**
+1. Create account at [shiprocket.in](https://shiprocket.in)
+2. Get your **email** and **password** for API
 
-#### ⚠️ Important: Update API Proxy for Production
+### Step 3: Deploy Backend to Render
 
-Your React app currently proxies API calls to `localhost:3000` (development). For production, update `vite.config.ts`:
+#### A. Prepare Your Next.js App
+
+Make sure you have a `vercel.json` or `render.yaml` in `l3modz/`:
+
+```json
+{
+  "version": 3,
+  "builds": [
+    { "src": "package.json", "use": "@vercel/next" }
+  ]
+}
+```
+
+#### B. Deploy on Render
+
+1. **Go to [render.com](https://render.com)** and sign in
+
+2. **Click "New +"** → **"Web Service"**
+
+3. **Connect GitHub repository**:
+   - Select your `l3-modz` repo
+   - Connect
+
+4. **Configure the service**:
+   - **Name**: `l3modz-backend`
+   - **Environment**: `Node`
+   - **Build Command**: `cd l3modz && npm install && npm run build`
+   - **Start Command**: `cd l3modz && npm start`
+   - **Root Directory**: Leave empty (Render uses this automatically)
+
+5. **Add Environment Variables** (in Render dashboard):
+   - `MONGODB_URI` - from MongoDB Atlas
+   - `NEXTAUTH_SECRET` - create a random secret
+   - `NEXTAUTH_URL` - your Render backend URL (e.g., `https://l3modz-backend.onrender.com`)
+   - `NEXT_PUBLIC_RAZORPAY_KEY_ID` - from Razorpay
+   - `RAZORPAY_KEY_SECRET` - from Razorpay
+   - `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` - from Cloudinary
+   - `CLOUDINARY_API_KEY` - from Cloudinary
+   - `CLOUDINARY_API_SECRET` - from Cloudinary
+   - `SHIPROCKET_EMAIL` - from ShipRocket
+   - `SHIPROCKET_PASSWORD` - from ShipRocket
+   - `ADMIN_SECRET` - create a random secret
+   - `JWT_SECRET` - create a random secret
+
+6. **Select Plan**: Free tier works for testing
+
+7. **Create Web Service**
+
+8. **Wait for deployment** (5-10 minutes)
+
+9. **Note your Render URL**: `https://l3modz-backend.onrender.com` (save this!)
+
+#### C. First Deploy May Fail (Normal!)
+
+If build fails:
+1. Check Render logs for errors
+2. Ensure MongoDB connection string is correct
+3. Verify all environment variables are set
+4. Render may need 2-3 deploys to work (free tier limitation)
+
+### Step 4: Deploy Frontend to Vercel
+
+#### A. Update API Proxy
+
+Update `l3modz/frontend/vite.config.ts`:
 
 ```typescript
 export default defineConfig({
@@ -125,177 +180,113 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api": {
-        target: "https://your-nextjs-app.vercel.app", // ← Update this!
+      '/api': {
+        target: 'https://l3modz-backend.onrender.com', // ← Your Render backend URL
         changeOrigin: true,
         secure: true,
       },
     },
   },
-});
+})
 ```
 
-Replace `https://your-nextjs-app.vercel.app` with your deployed Next.js backend URL.
+Replace with your actual Render URL!
 
-#### For the Backend (Next.js):
+#### B. Deploy on Vercel
 
-1. **Deploy Next.js app** as Option 1 above
-2. **Note the deployment URL** (e.g., `https://l3modz-backend.vercel.app`)
-3. **Update the React app's proxy** to point to this URL
-
-### Step 1: Prerequisites
-
-1. **Create accounts** (if you don't have them):
-   - [Vercel](https://vercel.com)
-   - [MongoDB Atlas](https://cloud.mongodb.com)
-   - [Razorpay](https://razorpay.com)
-   - [Cloudinary](https://cloudinary.com)
-   - [ShipRocket](https://shiprocket.in)
-
-2. **Connect your GitHub account to Vercel**
-
-### Step 2: Set up External Services
-
-#### MongoDB Atlas
-
-1. Create a new cluster
-2. Create a database user
-3. Get your connection string
-4. Whitelist your IP (or 0.0.0.0/0 for all)
-
-#### Razorpay
-
-1. Create a Razorpay account
-2. Get your Key ID and Secret from Dashboard > Settings > API Keys
-
-#### Cloudinary
-
-1. Create a Cloudinary account
-2. Get your Cloud Name, API Key, and API Secret from Dashboard
-
-#### ShipRocket
-
-1. Create a ShipRocket account
-2. Get your email and password for API authentication
-
-### Step 3: Deploy to Vercel
-
-#### Option A: Deploy from GitHub (Recommended)
-
-1. **Go to [Vercel Dashboard](https://vercel.com/dashboard)**
+1. **Go to [vercel.com/dashboard](https://vercel.com/dashboard)**
 
 2. **Click "New Project"**
 
-3. **Import your GitHub repository**:
-   - Connect your GitHub account
-   - Select the `l3-modz` repository
+3. **Import GitHub repository** (`l3-modz`)
 
-4. **Configure the project**:
-   - **Framework Preset**: Next.js
-   - **Root Directory**: `l3modz` ⭐ **(This is crucial for monorepo!)**
-   - **Build Command**: `npm run build` (should be automatic)
-   - **Output Directory**: `.next` (should be automatic)
+4. **Configure**:
+   - **Framework Preset**: Vite
+   - **Root Directory**: `l3modz/frontend` ⭐
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
 
 5. **Add Environment Variables**:
-   In the Vercel dashboard, go to your project settings and add all variables from `.env.example`:
-   - `MONGODB_URI`
-   - `NEXTAUTH_SECRET`
-   - `NEXTAUTH_URL` (set to your Vercel app URL)
-   - `NEXT_PUBLIC_RAZORPAY_KEY_ID`
-   - `RAZORPAY_KEY_SECRET`
-   - `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`
-   - `CLOUDINARY_API_KEY`
-   - `CLOUDINARY_API_SECRET`
-   - `SHIPROCKET_EMAIL`
-   - `SHIPROCKET_PASSWORD`
-   - `ADMIN_SECRET`
-   - `JWT_SECRET`
+   - `VITE_API_BASE_URL` = `https://l3modz-backend.onrender.com`
+   - `VITE_RAZORPAY_KEY_ID` = from Razorpay
 
-6. **Deploy**:
-   - Click "Deploy"
-   - Wait for the build to complete
-   - Your app will be live at `https://your-project-name.vercel.app`
+6. **Deploy**
 
-#### Option B: Deploy via Vercel CLI
+7. **Your Vercel URL**: `https://l3modz.vercel.app` (or your custom domain)
 
-1. **Install Vercel CLI**:
+### Step 5: Post-Deployment Setup
 
-   ```bash
-   npm install -g vercel
-   ```
+#### A. Update CORS (if needed)
 
-2. **Login to Vercel**:
+In your Next.js backend (`l3modz/app/api/*`), add CORS headers:
 
-   ```bash
-   vercel login
-   ```
+```typescript
+// In your API routes
+export const corsHeaders = {
+  'Access-Control-Allow-Origin': 'https://l3modz.vercel.app',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+```
 
-3. **Deploy**:
+#### B. Update Frontend Environment
 
-   ```bash
-   cd l3modz
-   vercel --prod
-   ```
+In `l3modz/frontend/.env.local`:
 
-4. **Set environment variables**:
-   ```bash
-   vercel env add MONGODB_URI
-   vercel env add NEXTAUTH_SECRET
-   # ... add all other variables
-   ```
+```env
+VITE_API_BASE_URL=https://l3modz-backend.onrender.com
+VITE_RAZORPAY_KEY_ID=rzp_test_yourkeyid
+```
 
-### Step 4: Post-Deployment Configuration
+#### C. Test Everything
 
-1. **Update NEXTAUTH_URL**:
-   - In Vercel dashboard, update `NEXTAUTH_URL` to your production URL
-   - Example: `https://l3modz.vercel.app`
+1. Visit your Vercel frontend: `https://l3modz.vercel.app`
+2. Test user registration
+3. Test product browsing
+4. Test payment with Razorpay test mode
+5. Check admin panel
 
-2. **Database Connection**:
-   - Ensure MongoDB Atlas allows connections from `0.0.0.0/0` or add Vercel's IP ranges
+### Step 6: Troubleshooting
 
-3. **Domain Setup** (Optional):
-   - In Vercel dashboard, go to Settings > Domains
-   - Add your custom domain if needed
+**Frontend can't reach backend:**
+- Check CORS headers
+- Verify Render URL is correct in `vite.config.ts`
+- Check Render backend is running (check logs)
 
-4. **Environment Variables Check**:
-   - Go to your deployed app
-   - Check if all features work (payments, image uploads, etc.)
+**Backend on Render times out:**
+- Free tier may be slow
+- Upgrade to paid plan if needed
+- Render spins down free tier after 15 mins inactivity
 
-### Step 5: Testing Your Deployment
-
-1. **Visit your deployed app**
-2. **Test user registration/login**
-3. **Test product browsing**
-4. **Test payment flow** (use Razorpay test mode)
-5. **Test admin panel** (if applicable)
-
-### Troubleshooting
-
-**Build fails**:
-
-- Check Vercel build logs
-- Ensure all dependencies are in `package.json`
-- Verify environment variables are set correctly
-
-**Database connection issues**:
-
-- Check MongoDB Atlas network access
-- Verify connection string format
+**Database connection fails:**
+- Verify MongoDB Atlas IP whitelist includes `0.0.0.0/0`
+- Check connection string format
 - Ensure database user has correct permissions
 
-**Payment issues**:
+**Payment processing fails:**
+- Use Razorpay test keys for development
+- Check test mode is enabled in Razorpay dashboard
 
-- Verify Razorpay keys are correct
-- Check if you're using test/live mode appropriately
+### 📊 **Cost Breakdown**
 
-**Image upload issues**:
+| Service | Free | Cost |
+|---------|------|------|
+| Vercel | ✅ | $0-$20/mo |
+| Render | ✅ (slow) | $5-$20/mo |
+| MongoDB Atlas | ✅ (512MB) | $0-$57+/mo |
+| Razorpay | ✅ | 2% transaction |
+| Total | ~$0-5 | ~$5-100/mo |
 
-- Verify Cloudinary credentials
-- Check upload presets if using custom configurations
+Your entire stack can run **free** with:
+- Vercel free tier for frontend
+- Render free tier for backend (slow)
+- MongoDB Atlas free tier (512MB)
+- Razorpay sandbox mode (testing)
 
 ## Learn More
 
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Vercel Deployment Guide](https://vercel.com/docs/deployments/overview)
+- [Render Deployment Guide](https://render.com/docs)
 - [MongoDB Atlas Docs](https://docs.atlas.mongodb.com/)
 - [Razorpay Integration](https://razorpay.com/docs/)
