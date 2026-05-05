@@ -61,9 +61,24 @@ Your project has both:
 - **`l3modz/`** - Complete Next.js full-stack app (frontend + API routes)
 - **`l3modz/frontend/`** - Separate React/Vite frontend
 
-**Recommendation: Deploy only the Next.js app** (`l3modz/`) - it's your complete application!
+### 🎯 **Deploy React Frontend (Vite)**
 
-### Option 1: Deploy Next.js Backend Only (Recommended)
+Your React/Vite frontend is in `l3modz/frontend/` and needs to connect to your Next.js backend API.
+
+#### Steps:
+
+1. **Go to [Vercel Dashboard](https://vercel.com/dashboard)**
+2. **Click "New Project"**
+3. **Import your GitHub repository**
+4. **Configure the project**:
+   - **Framework Preset**: Vite
+   - **Root Directory**: `l3modz/frontend` ⭐ **(This is crucial!)**
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+5. **Add Environment Variables** (API endpoints)
+6. **Deploy**
+
+### Option 1: Deploy Next.js Backend Only
 
 Your Next.js app is a complete full-stack application with both frontend pages and API routes.
 
@@ -80,23 +95,53 @@ Your Next.js app is a complete full-stack application with both frontend pages a
 5. **Add Environment Variables** (from `.env.example`)
 6. **Deploy**
 
-### Option 2: Deploy Frontend Separately
+If you want to deploy the **React/Vite frontend** (`l3modz/frontend/`):
 
-If you want to deploy the React/Vite frontend (`l3modz/frontend/`) separately:
+#### Steps:
 
-#### For the Frontend:
+1. **Go to [Vercel Dashboard](https://vercel.com/dashboard)**
+2. **Click "New Project"**
+3. **Import your GitHub repository**
+4. **Configure the project**:
+   - **Framework Preset**: Vite
+   - **Root Directory**: `l3modz/frontend` ⭐ **(This is crucial!)**
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+5. **Add Environment Variables** (if needed for API calls)
+6. **Deploy**
 
-1. **Create a new Vercel project**
-2. **Set Root Directory**: `l3modz/frontend`
-3. **Framework Preset**: Vite
-4. **Build Command**: `npm run build`
-5. **Output Directory**: `dist`
-6. **Add environment variables** for API endpoints
+#### ⚠️ Important: Update API Proxy for Production
 
-#### For the Backend:
+Your React app currently proxies API calls to `localhost:3000` (development). For production, update `vite.config.ts`:
 
-1. **Deploy Next.js app** as above
-2. **Update frontend** to point to deployed backend API URLs
+```typescript
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  server: {
+    port: 5173,
+    proxy: {
+      "/api": {
+        target: "https://your-nextjs-app.vercel.app", // ← Update this!
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
+});
+```
+
+Replace `https://your-nextjs-app.vercel.app` with your deployed Next.js backend URL.
+
+#### For the Backend (Next.js):
+
+1. **Deploy Next.js app** as Option 1 above
+2. **Note the deployment URL** (e.g., `https://l3modz-backend.vercel.app`)
+3. **Update the React app's proxy** to point to this URL
 
 ### Step 1: Prerequisites
 
