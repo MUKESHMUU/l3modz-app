@@ -3,6 +3,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://l3modz-app.onrender.com/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
