@@ -26,6 +26,7 @@ const mainLinks = [
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isProductsOpen, setIsProductsOpen] = useState(false);
   const [isMobileProductsOpen, setIsMobileProductsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -112,17 +113,17 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-brand-border shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+        <div className="flex items-center justify-between h-16 md:h-20">
 
-          {/* Logo */}
-          <div className="flex-shrink-0 flex items-center">
-            <Link to="/" aria-label="L3 MODZ home" className="block">
-              <div className="h-14 w-[200px] overflow-hidden">
+          {/* Logo - Responsive width */}
+          <div className="flex-shrink-0 flex items-center w-24 sm:w-28 md:w-32">
+            <Link to="/" aria-label="L3 MODZ home" className="block w-full">
+              <div className="h-12 md:h-14 overflow-hidden flex items-center">
                 <img
                   src="/black.png"
                   alt="L3 MODZ"
-                  className="h-14 w-auto origin-left scale-[1.35] object-left"
+                  className="h-full w-auto object-contain"
                   onError={(e) => {
                     e.currentTarget.src = '/l3modz-logo-dark.svg';
                   }}
@@ -212,25 +213,104 @@ export default function Header() {
             </Link>
           </div>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden flex items-center gap-4">
-            <Link to="/cart" className="text-gray-600 relative">
-              <ShoppingCart size={24} />
+          {/* Mobile Actions - Search, Cart, Menu */}
+          <div className="md:hidden flex items-center justify-end gap-3 sm:gap-4">
+            {/* Mobile Search Icon */}
+            <button
+              onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+              className="text-gray-600 hover:text-brand-text focus:outline-none transition flex-shrink-0"
+              aria-label="Search"
+            >
+              <Search size={20} />
+            </button>
+
+            {/* Mobile Cart */}
+            <Link to="/cart" className="text-gray-600 hover:text-brand-text relative transition flex-shrink-0">
+              <ShoppingCart size={20} />
               {cartCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-brand-accent text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                <span className="absolute -top-2 -right-2 bg-brand-accent text-white text-xs font-bold px-1 py-0.5 rounded-full min-w-[20px] text-center">
                   {cartCount}
                 </span>
               )}
             </Link>
+
+            {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-gray-600 hover:text-brand-text focus:outline-none"
+              className="text-gray-600 hover:text-brand-text focus:outline-none transition flex-shrink-0"
+              aria-label="Toggle menu"
             >
-              {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
+              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Mobile Search Bar */}
+      {isMobileSearchOpen && (
+        <div className="md:hidden border-b border-brand-border px-2 sm:px-4 py-3 bg-brand-bg">
+          <div className="relative" ref={mobileSearchRef}>
+            <form onSubmit={handleSearch} className="relative">
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                autoFocus
+                className="w-full pl-4 pr-10 py-2 border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary text-sm"
+              />
+              <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-brand-primary transition">
+                <Search size={18} />
+              </button>
+            </form>
+
+            {showSuggestions && searchQuery.trim().length >= 2 && (
+              <div className="absolute top-[calc(100%+8px)] left-0 right-0 rounded-lg border border-brand-border bg-white shadow-lg overflow-hidden z-50">
+                {isSearching ? (
+                  <p className="px-4 py-3 text-sm text-gray-500">Searching...</p>
+                ) : suggestions.length > 0 ? (
+                  <>
+                    {suggestions.map((item) => (
+                      <button
+                        key={item._id}
+                        type="button"
+                        onClick={() => handleSuggestionSelect(item)}
+                        className="w-full px-4 py-2.5 text-left hover:bg-gray-50 transition flex items-center gap-3"
+                      >
+                        <img
+                          src={item.images?.[0] || 'https://via.placeholder.com/80?text=L3'}
+                          alt={item.title}
+                          className="h-9 w-9 rounded-md object-cover border border-brand-border"
+                        />
+                        <span className="text-sm text-brand-text line-clamp-1">{item.title}</span>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={handleSearchAllSelect}
+                      className="w-full border-t border-brand-border px-4 py-2.5 text-left text-sm font-semibold text-brand-primary hover:bg-brand-bg transition"
+                    >
+                      Search for "{searchQuery.trim()}"
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSearchAllSelect}
+                    className="w-full px-4 py-3 text-left text-sm text-gray-600 hover:bg-gray-50 transition"
+                  >
+                    No exact matches. Search for "{searchQuery.trim()}"
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Desktop Navigation Below Header */}
       <nav className="hidden md:block bg-brand-bg border-b border-brand-border py-2 text-sm">
@@ -279,69 +359,14 @@ export default function Header() {
         </div>
       </nav>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu Dropdown */}
       {isMenuOpen && (
-        <div className="md:hidden bg-white border-b border-brand-border p-4">
-          <div className="mb-4 relative" ref={mobileSearchRef}>
-            <form onSubmit={handleSearch} className="relative">
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setShowSuggestions(true);
-                }}
-                onFocus={() => setShowSuggestions(true)}
-                className="w-full pl-4 pr-10 py-2 border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
-              />
-              <button type="submit" className="absolute right-0 top-0 h-full px-3 text-gray-500">
-                <Search size={18} />
-              </button>
-            </form>
-
-            {showSuggestions && searchQuery.trim().length >= 2 && (
-              <div className="absolute top-[calc(100%+8px)] left-0 right-0 rounded-xl border border-brand-border bg-white shadow-lg overflow-hidden z-50 max-h-72 overflow-y-auto">
-                {isSearching ? (
-                  <p className="px-4 py-3 text-sm text-gray-500">Searching...</p>
-                ) : suggestions.length > 0 ? (
-                  <>
-                    {suggestions.map((item) => (
-                      <button
-                        key={item._id}
-                        type="button"
-                        onClick={() => handleSuggestionSelect(item)}
-                        className="w-full px-4 py-2.5 text-left hover:bg-gray-50 transition text-sm text-brand-text line-clamp-1"
-                      >
-                        {item.title}
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={handleSearchAllSelect}
-                      className="w-full border-t border-brand-border px-4 py-2.5 text-left text-sm font-semibold text-brand-primary hover:bg-brand-bg transition"
-                    >
-                      Search for "{searchQuery.trim()}"
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleSearchAllSelect}
-                    className="w-full px-4 py-3 text-left text-sm text-gray-600 hover:bg-gray-50 transition"
-                  >
-                    No exact matches. Search for "{searchQuery.trim()}"
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          <nav className="flex flex-col space-y-1">
+        <div className="md:hidden bg-white border-b border-brand-border">
+          <nav className="flex flex-col space-y-1 px-2 sm:px-4 py-2">
             {/* Products expandable section */}
             <button
               onClick={() => setIsMobileProductsOpen((p) => !p)}
-              className="flex items-center justify-between font-semibold text-gray-800 hover:text-brand-primary p-2 rounded-md hover:bg-gray-50 w-full text-left uppercase tracking-wide text-sm"
+              className="flex items-center justify-between font-semibold text-gray-800 hover:text-brand-primary px-3 py-2 rounded-md hover:bg-gray-50 w-full text-left uppercase tracking-wide text-sm transition"
             >
               PRODUCTS
               <ChevronDown size={16} className={`transition-transform ${isMobileProductsOpen ? 'rotate-180' : ''}`} />
@@ -352,7 +377,7 @@ export default function Header() {
                   <Link
                     key={cat.name}
                     to={cat.path}
-                    className="block font-medium text-gray-600 hover:text-brand-primary p-2 rounded-md hover:bg-gray-50 text-sm uppercase tracking-wide"
+                    className="block font-medium text-gray-600 hover:text-brand-primary px-3 py-2 rounded-md hover:bg-gray-50 text-sm uppercase tracking-wide transition"
                     onClick={() => { setIsMenuOpen(false); setIsMobileProductsOpen(false); }}
                   >
                     {cat.name}
@@ -365,15 +390,15 @@ export default function Header() {
               <Link
                 key={link.name}
                 to={link.path}
-                className="font-semibold text-gray-800 hover:text-brand-primary p-2 rounded-md hover:bg-gray-50 uppercase tracking-wide text-sm"
+                className="font-semibold text-gray-800 hover:text-brand-primary px-3 py-2 rounded-md hover:bg-gray-50 uppercase tracking-wide text-sm transition"
                 onClick={() => setIsMenuOpen(false)}
               >
                 {link.name}
               </Link>
             ))}
 
-            <Link to="/profile" className="font-medium text-gray-800 hover:text-brand-primary p-2" onClick={() => setIsMenuOpen(false)}>Profile / Login</Link>
-            <a href="https://wa.me/919843199393" target="_blank" rel="noopener noreferrer" className="font-medium text-brand-primary p-2">Contact Now</a>
+            <Link to="/profile" className="font-medium text-gray-800 hover:text-brand-primary px-3 py-2 rounded-md hover:bg-gray-50 transition" onClick={() => setIsMenuOpen(false)}>Profile / Login</Link>
+            <a href="https://wa.me/919843199393" target="_blank" rel="noopener noreferrer" className="font-medium text-brand-primary px-3 py-2 rounded-md hover:bg-brand-bg transition">Contact Now</a>
           </nav>
         </div>
       )}

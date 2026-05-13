@@ -13,7 +13,7 @@ export default function Footer() {
               <MessageSquareText size={18} />
               <p className="text-sm font-semibold">Customer Service</p>
             </div>
-            <p className="text-sm text-gray-700">Mon-Sun, 11am-8pm IST</p>
+            <p className="text-sm text-gray-700">Monday - Saturday : 10am to 6pm IST</p>
           </div>
 
           <div className="rounded-2xl border border-emerald-100 bg-white/90 p-5">
