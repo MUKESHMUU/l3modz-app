@@ -58,14 +58,50 @@ export default function ProductDetails() {
     .map((line: string) => line.replace(/^[•*-]\s*/, '').replace(/^\.\s*/, ''));
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 pb-16">
-      
-      {/* LEFT: Image Gallery (60% on desktop) */}
-      <div className="lg:col-span-7">
-        <ProductGallery images={product.images || []} />
+    <div className="flex flex-col gap-6 pb-16 lg:grid lg:grid-cols-12 lg:gap-12">
+      <section className="order-1 lg:col-span-5 lg:col-start-8 lg:row-start-1">
+        <div className="flex flex-col space-y-6">
+          <div>
+            <div className="flex items-center space-x-2 text-sm text-brand-primary font-semibold tracking-wider uppercase mb-2">
+              {product.categories?.map((c: string) => <span key={c}>{c.replace('-', ' ')}</span>)}
+            </div>
+            <h1 className="text-2xl sm:text-3xl md:text-[2rem] lg:text-4xl font-extrabold text-brand-text leading-tight tracking-tight mb-3">
+              {product.title}
+            </h1>
 
-        {/* Description below product image */}
-        <div className="mt-6 overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center text-yellow-500">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star key={i} size={18} className={i < Math.round(product.rating || 0) ? 'fill-current' : 'text-gray-300'} />
+                ))}
+              </div>
+              <a href="#reviews" className="text-sm text-brand-primary hover:underline font-medium">
+                {product.numReviews} Reviews
+              </a>
+            </div>
+          </div>
+
+          <hr className="border-brand-border" />
+
+          {product.features && product.features.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {product.features.map((feat: string, idx: number) => (
+                <div key={idx} className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
+                  <CheckCircle size={16} className="text-green-500 mr-2 shrink-0" />
+                  {feat}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="order-2 lg:col-span-7 lg:col-start-1 lg:row-start-1">
+        <ProductGallery images={product.images || []} />
+      </section>
+
+      <section className="order-3 lg:col-span-7 lg:col-start-1 lg:row-start-2">
+        <div className="overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-brand-border bg-gradient-to-r from-gray-50 to-white px-5 py-3">
             <h3 className="font-semibold text-brand-text text-sm uppercase tracking-[0.08em] flex items-center">
               <List size={16} className="mr-2 text-brand-primary" /> Product Description
@@ -86,82 +122,39 @@ export default function ProductDetails() {
             </ul>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* RIGHT: Product Details & Sticky Buy Box (40% on desktop) */}
-      <div className="lg:col-span-5 relative">
-        <div className="flex flex-col space-y-6">
-          
-          {/* Header Info */}
+      <section className="order-4 lg:col-span-5 lg:col-start-8 lg:row-start-2">
+        <StickyBuyBox product={product} />
+      </section>
+
+      <section className="order-5 lg:col-span-5 lg:col-start-8 lg:row-start-3">
+        <CompatibilityChecker compatibilities={product.compatibility || []} />
+      </section>
+
+      {product.specs && (
+        <section className="order-6 lg:col-span-5 lg:col-start-8 lg:row-start-4">
           <div>
-            <div className="flex items-center space-x-2 text-sm text-brand-primary font-semibold tracking-wider uppercase mb-2">
-              {product.categories?.map((c: string) => <span key={c}>{c.replace('-', ' ')}</span>)}
-            </div>
-            <h1 className="text-2xl sm:text-3xl md:text-[2rem] lg:text-4xl font-extrabold text-brand-text leading-tight tracking-tight mb-3">
-              {product.title}
-            </h1>
-            
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center text-yellow-500">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} size={18} className={i < Math.round(product.rating || 0) ? "fill-current" : "text-gray-300"} />
-                ))}
+            <h3 className="font-semibold text-brand-text mb-4 text-sm uppercase tracking-wider flex items-center">
+              <Settings size={16} className="mr-2" /> Specifications
+            </h3>
+            <div className="border border-brand-border rounded-xl overflow-hidden text-sm">
+              <div className="grid grid-cols-3 border-b border-brand-border">
+                <div className="bg-gray-50 font-semibold p-3 text-gray-700 border-r border-brand-border">SKU</div>
+                <div className="col-span-2 p-3 text-gray-600">{product.specs.sku || 'N/A'}</div>
               </div>
-              <a href="#reviews" className="text-sm text-brand-primary hover:underline font-medium">
-                {product.numReviews} Reviews
-              </a>
-            </div>
-          </div>
-
-          <hr className="border-brand-border" />
-
-          {/* Feature Highlights Grid */}
-          {product.features && product.features.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {product.features.map((feat: string, idx: number) => (
-                <div key={idx} className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
-                  <CheckCircle size={16} className="text-green-500 mr-2 shrink-0" />
-                  {feat}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Buy Box shown before fitment checker */}
-          <div className="lg:block">
-            <StickyBuyBox product={product} />
-          </div>
-
-          {/* Compatibility Checker */}
-          <CompatibilityChecker compatibilities={product.compatibility || []} />
-
-          <hr className="border-brand-border" />
-
-          {/* Specification Table */}
-          {product.specs && (
-            <div>
-              <h3 className="font-semibold text-brand-text mb-4 text-sm uppercase tracking-wider flex items-center">
-                <Settings size={16} className="mr-2" /> Specifications
-              </h3>
-              <div className="border border-brand-border rounded-xl overflow-hidden text-sm">
-                <div className="grid grid-cols-3 border-b border-brand-border">
-                  <div className="bg-gray-50 font-semibold p-3 text-gray-700 border-r border-brand-border">SKU</div>
-                  <div className="col-span-2 p-3 text-gray-600">{product.specs.sku || 'N/A'}</div>
-                </div>
-                <div className="grid grid-cols-3 border-b border-brand-border">
-                  <div className="bg-gray-50 font-semibold p-3 text-gray-700 border-r border-brand-border">Material</div>
-                  <div className="col-span-2 p-3 text-gray-600">{product.specs.material || 'Premium Grade'}</div>
-                </div>
-                <div className="grid grid-cols-3">
-                  <div className="bg-gray-50 font-semibold p-3 text-gray-700 border-r border-brand-border">Installation</div>
-                  <div className="col-span-2 p-3 text-gray-600">{product.specs.installation || 'Direct Fit (DIY Friendly)'}</div>
-                </div>
+              <div className="grid grid-cols-3 border-b border-brand-border">
+                <div className="bg-gray-50 font-semibold p-3 text-gray-700 border-r border-brand-border">Material</div>
+                <div className="col-span-2 p-3 text-gray-600">{product.specs.material || 'Premium Grade'}</div>
+              </div>
+              <div className="grid grid-cols-3">
+                <div className="bg-gray-50 font-semibold p-3 text-gray-700 border-r border-brand-border">Installation</div>
+                <div className="col-span-2 p-3 text-gray-600">{product.specs.installation || 'Direct Fit (DIY Friendly)'}</div>
               </div>
             </div>
-          )}
-
-        </div>
-      </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
