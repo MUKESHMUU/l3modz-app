@@ -59,6 +59,7 @@ export default function ProductDetails() {
 
   return (
     <div className="flex flex-col gap-6 pb-16 lg:grid lg:grid-cols-12 lg:gap-12">
+      {/* Title Section - Mobile order-1, Desktop row-start-1 */}
       <section className="order-1 lg:col-span-5 lg:col-start-8 lg:row-start-1">
         <div className="flex flex-col space-y-6">
           <div>
@@ -80,27 +81,35 @@ export default function ProductDetails() {
               </a>
             </div>
           </div>
-
-          <hr className="border-brand-border" />
-
-          {product.features && product.features.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {product.features.map((feat: string, idx: number) => (
-                <div key={idx} className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
-                  <CheckCircle size={16} className="text-green-500 mr-2 shrink-0" />
-                  {feat}
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </section>
 
+      {/* Gallery Section - Mobile order-2, Desktop row-start-1 */}
       <section className="order-2 lg:col-span-7 lg:col-start-1 lg:row-start-1">
         <ProductGallery images={product.images || []} />
       </section>
 
-      <section className="order-3 lg:col-span-7 lg:col-start-1 lg:row-start-2">
+      {/* Buy Box Section - Mobile order-3, Desktop row-start-3 */}
+      <section className="order-3 lg:col-span-5 lg:col-start-8 lg:row-start-3">
+        <StickyBuyBox product={product} />
+      </section>
+
+      {/* Features Section - Mobile order-4, Desktop row-start-2 (below title, above buy box) */}
+      {product.features && product.features.length > 0 && (
+        <section className="order-4 lg:col-span-5 lg:col-start-8 lg:row-start-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {product.features.map((feat: string, idx: number) => (
+              <div key={idx} className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
+                <CheckCircle size={16} className="text-green-500 mr-2 shrink-0" />
+                {feat}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Description Section - Mobile order-5, Desktop row-start-2 */}
+      <section className="order-5 lg:col-span-7 lg:col-start-1 lg:row-start-2">
         <div className="overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-brand-border bg-gradient-to-r from-gray-50 to-white px-5 py-3">
             <h3 className="font-semibold text-brand-text text-sm uppercase tracking-[0.08em] flex items-center">
@@ -124,16 +133,14 @@ export default function ProductDetails() {
         </div>
       </section>
 
-      <section className="order-4 lg:col-span-5 lg:col-start-8 lg:row-start-2">
-        <StickyBuyBox product={product} />
-      </section>
-
-      <section className="order-5 lg:col-span-5 lg:col-start-8 lg:row-start-3">
+      {/* Compatibility Section - Mobile order-6, Desktop row-start-4 */}
+      <section className="order-6 lg:col-span-5 lg:col-start-8 lg:row-start-4">
         <CompatibilityChecker compatibilities={product.compatibility || []} />
       </section>
 
+      {/* Specifications Section - Mobile order-7, Desktop row-start-5 */}
       {product.specs && (
-        <section className="order-6 lg:col-span-5 lg:col-start-8 lg:row-start-4">
+        <section className="order-7 lg:col-span-5 lg:col-start-8 lg:row-start-5">
           <div>
             <h3 className="font-semibold text-brand-text mb-4 text-sm uppercase tracking-wider flex items-center">
               <Settings size={16} className="mr-2" /> Specifications
