@@ -58,110 +58,208 @@ export default function ProductDetails() {
     .map((line: string) => line.replace(/^[•*-]\s*/, '').replace(/^\.\s*/, ''));
 
   return (
-    <div className="flex flex-col gap-6 pb-16 lg:grid lg:grid-cols-2 lg:gap-8 xl:gap-10">
-      {/* Title Section - Mobile order-1, Desktop row-start-1 */}
-      <section className="order-1 lg:col-start-2 lg:row-start-1 lg:row-end-2">
-        <div className="flex flex-col space-y-6">
-          <div>
-            <div className="flex items-center space-x-2 text-sm text-brand-primary font-semibold tracking-wider uppercase mb-2">
-              {product.categories?.map((c: string) => <span key={c}>{c.replace('-', ' ')}</span>)}
-            </div>
-            <h1 className="text-2xl sm:text-3xl md:text-[2rem] lg:text-4xl font-extrabold text-brand-text leading-tight tracking-tight mb-3">
-              {product.title}
-            </h1>
+    <>
+      <div className="flex flex-col gap-6 pb-16 lg:hidden">
+        <section className="order-1">
+          <div className="flex flex-col space-y-6">
+            <div>
+              <div className="flex items-center space-x-2 text-sm text-brand-primary font-semibold tracking-wider uppercase mb-2">
+                {product.categories?.map((c: string) => <span key={c}>{c.replace('-', ' ')}</span>)}
+              </div>
+              <h1 className="text-2xl sm:text-3xl md:text-[2rem] lg:text-4xl font-extrabold text-brand-text leading-tight tracking-tight mb-3">
+                {product.title}
+              </h1>
 
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center text-yellow-500">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} size={18} className={i < Math.round(product.rating || 0) ? 'fill-current' : 'text-gray-300'} />
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center text-yellow-500">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} size={18} className={i < Math.round(product.rating || 0) ? 'fill-current' : 'text-gray-300'} />
+                  ))}
+                </div>
+                <a href="#reviews" className="text-sm text-brand-primary hover:underline font-medium">
+                  {product.numReviews} Reviews
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="order-2">
+          <ProductGallery images={product.images || []} />
+        </section>
+
+        <section className="order-3">
+          <StickyBuyBox product={product} />
+        </section>
+
+        {product.features && product.features.length > 0 && (
+          <section className="order-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {product.features.map((feat: string, idx: number) => (
+                <div key={idx} className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
+                  <CheckCircle size={16} className="text-green-500 mr-2 shrink-0" />
+                  {feat}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section className="order-5">
+          <div className="overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-brand-border bg-gradient-to-r from-gray-50 to-white px-5 py-3">
+              <h3 className="font-semibold text-brand-text text-sm uppercase tracking-[0.08em] flex items-center">
+                <List size={16} className="mr-2 text-brand-primary" /> Product Description
+              </h3>
+              <span className="rounded-full bg-brand-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-brand-primary">
+                Details
+              </span>
+            </div>
+
+            <div className="p-5">
+              <ul className="space-y-2.5">
+                {descriptionPoints.map((point: string, idx: number) => (
+                  <li key={idx} className="flex items-start gap-2.5 text-sm text-gray-700 leading-relaxed">
+                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-brand-primary shrink-0" />
+                    <span>{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section className="order-6">
+          <CompatibilityChecker compatibilities={product.compatibility || []} />
+        </section>
+
+        {product.specs && (
+          <section className="order-7">
+            <div>
+              <h3 className="font-semibold text-brand-text mb-4 text-sm uppercase tracking-wider flex items-center">
+                <Settings size={16} className="mr-2" /> Specifications
+              </h3>
+              <div className="border border-brand-border rounded-xl overflow-hidden text-sm">
+                <div className="grid grid-cols-3 border-b border-brand-border">
+                  <div className="bg-gray-50 font-semibold p-3 text-gray-700 border-r border-brand-border">SKU</div>
+                  <div className="col-span-2 p-3 text-gray-600">{product.specs.sku || 'N/A'}</div>
+                </div>
+                <div className="grid grid-cols-3 border-b border-brand-border">
+                  <div className="bg-gray-50 font-semibold p-3 text-gray-700 border-r border-brand-border">Material</div>
+                  <div className="col-span-2 p-3 text-gray-600">{product.specs.material || 'Premium Grade'}</div>
+                </div>
+                <div className="grid grid-cols-3">
+                  <div className="bg-gray-50 font-semibold p-3 text-gray-700 border-r border-brand-border">Installation</div>
+                  <div className="col-span-2 p-3 text-gray-600">{product.specs.installation || 'Direct Fit (DIY Friendly)'}</div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+      </div>
+
+      <div className="hidden lg:grid lg:grid-cols-[1.2fr_0.8fr] lg:gap-8 xl:gap-10 pb-16">
+        <div className="flex flex-col gap-6 min-w-0">
+          <section>
+            <ProductGallery images={product.images || []} />
+          </section>
+
+          <section>
+            <div className="overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b border-brand-border bg-gradient-to-r from-gray-50 to-white px-5 py-3">
+                <h3 className="font-semibold text-brand-text text-sm uppercase tracking-[0.08em] flex items-center">
+                  <List size={16} className="mr-2 text-brand-primary" /> Product Description
+                </h3>
+                <span className="rounded-full bg-brand-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-brand-primary">
+                  Details
+                </span>
+              </div>
+
+              <div className="p-5">
+                <ul className="space-y-2.5">
+                  {descriptionPoints.map((point: string, idx: number) => (
+                    <li key={idx} className="flex items-start gap-2.5 text-sm text-gray-700 leading-relaxed">
+                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-brand-primary shrink-0" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div className="flex flex-col gap-6 min-w-0">
+          <section>
+            <div className="flex flex-col space-y-5">
+              <div>
+                <div className="flex items-center space-x-2 text-sm text-brand-primary font-semibold tracking-wider uppercase mb-2">
+                  {product.categories?.map((c: string) => <span key={c}>{c.replace('-', ' ')}</span>)}
+                </div>
+                <h1 className="text-2xl sm:text-3xl md:text-[2rem] lg:text-4xl font-extrabold text-brand-text leading-tight tracking-tight mb-3">
+                  {product.title}
+                </h1>
+
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center text-yellow-500">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} size={18} className={i < Math.round(product.rating || 0) ? 'fill-current' : 'text-gray-300'} />
+                    ))}
+                  </div>
+                  <a href="#reviews" className="text-sm text-brand-primary hover:underline font-medium">
+                    {product.numReviews} Reviews
+                  </a>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <StickyBuyBox product={product} />
+          </section>
+
+          {product.features && product.features.length > 0 && (
+            <section>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {product.features.map((feat: string, idx: number) => (
+                  <div key={idx} className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
+                    <CheckCircle size={16} className="text-green-500 mr-2 shrink-0" />
+                    {feat}
+                  </div>
                 ))}
               </div>
-              <a href="#reviews" className="text-sm text-brand-primary hover:underline font-medium">
-                {product.numReviews} Reviews
-              </a>
-            </div>
-          </div>
+            </section>
+          )}
+
+          <section>
+            <CompatibilityChecker compatibilities={product.compatibility || []} />
+          </section>
+
+          {product.specs && (
+            <section>
+              <div>
+                <h3 className="font-semibold text-brand-text mb-4 text-sm uppercase tracking-wider flex items-center">
+                  <Settings size={16} className="mr-2" /> Specifications
+                </h3>
+                <div className="border border-brand-border rounded-xl overflow-hidden text-sm">
+                  <div className="grid grid-cols-3 border-b border-brand-border">
+                    <div className="bg-gray-50 font-semibold p-3 text-gray-700 border-r border-brand-border">SKU</div>
+                    <div className="col-span-2 p-3 text-gray-600">{product.specs.sku || 'N/A'}</div>
+                  </div>
+                  <div className="grid grid-cols-3 border-b border-brand-border">
+                    <div className="bg-gray-50 font-semibold p-3 text-gray-700 border-r border-brand-border">Material</div>
+                    <div className="col-span-2 p-3 text-gray-600">{product.specs.material || 'Premium Grade'}</div>
+                  </div>
+                  <div className="grid grid-cols-3">
+                    <div className="bg-gray-50 font-semibold p-3 text-gray-700 border-r border-brand-border">Installation</div>
+                    <div className="col-span-2 p-3 text-gray-600">{product.specs.installation || 'Direct Fit (DIY Friendly)'}</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
         </div>
-      </section>
-
-      {/* Gallery Section - Mobile order-2, Desktop row-start-1 */}
-      <section className="order-2 lg:col-start-1 lg:row-start-1 lg:row-end-2">
-        <ProductGallery images={product.images || []} />
-      </section>
-
-      {/* Buy Box Section - Mobile order-3, Desktop row-start-3 */}
-      <section className="order-3 lg:col-start-2 lg:row-start-2 lg:row-end-3">
-        <StickyBuyBox product={product} />
-      </section>
-
-      {/* Features Section - Mobile order-4, Desktop row-start-2 (below title, above buy box) */}
-      {product.features && product.features.length > 0 && (
-        <section className="order-4 lg:col-start-2 lg:row-start-3 lg:row-end-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {product.features.map((feat: string, idx: number) => (
-              <div key={idx} className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
-                <CheckCircle size={16} className="text-green-500 mr-2 shrink-0" />
-                {feat}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Description Section - Mobile order-5, Desktop row-start-2 */}
-      <section className="order-5 lg:col-start-1 lg:row-start-2 lg:row-end-3">
-        <div className="overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-brand-border bg-gradient-to-r from-gray-50 to-white px-5 py-3">
-            <h3 className="font-semibold text-brand-text text-sm uppercase tracking-[0.08em] flex items-center">
-              <List size={16} className="mr-2 text-brand-primary" /> Product Description
-            </h3>
-            <span className="rounded-full bg-brand-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-brand-primary">
-              Details
-            </span>
-          </div>
-
-          <div className="p-5">
-            <ul className="space-y-2.5">
-              {descriptionPoints.map((point: string, idx: number) => (
-                <li key={idx} className="flex items-start gap-2.5 text-sm text-gray-700 leading-relaxed">
-                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-brand-primary shrink-0" />
-                  <span>{point}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      {/* Compatibility Section - Mobile order-6, Desktop row-start-4 */}
-      <section className="order-6 lg:col-start-2 lg:row-start-4 lg:row-end-5">
-        <CompatibilityChecker compatibilities={product.compatibility || []} />
-      </section>
-
-      {/* Specifications Section - Mobile order-7, Desktop row-start-5 */}
-      {product.specs && (
-        <section className="order-7 lg:col-start-2 lg:row-start-5 lg:row-end-6">
-          <div>
-            <h3 className="font-semibold text-brand-text mb-4 text-sm uppercase tracking-wider flex items-center">
-              <Settings size={16} className="mr-2" /> Specifications
-            </h3>
-            <div className="border border-brand-border rounded-xl overflow-hidden text-sm">
-              <div className="grid grid-cols-3 border-b border-brand-border">
-                <div className="bg-gray-50 font-semibold p-3 text-gray-700 border-r border-brand-border">SKU</div>
-                <div className="col-span-2 p-3 text-gray-600">{product.specs.sku || 'N/A'}</div>
-              </div>
-              <div className="grid grid-cols-3 border-b border-brand-border">
-                <div className="bg-gray-50 font-semibold p-3 text-gray-700 border-r border-brand-border">Material</div>
-                <div className="col-span-2 p-3 text-gray-600">{product.specs.material || 'Premium Grade'}</div>
-              </div>
-              <div className="grid grid-cols-3">
-                <div className="bg-gray-50 font-semibold p-3 text-gray-700 border-r border-brand-border">Installation</div>
-                <div className="col-span-2 p-3 text-gray-600">{product.specs.installation || 'Direct Fit (DIY Friendly)'}</div>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
