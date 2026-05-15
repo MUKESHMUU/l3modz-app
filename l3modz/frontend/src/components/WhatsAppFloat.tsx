@@ -23,7 +23,7 @@ export default function WhatsAppFloat() {
           <path d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2Zm0 1.8A3.95 3.95 0 0 0 3.8 7.75v8.5a3.95 3.95 0 0 0 3.95 3.95h8.5a3.95 3.95 0 0 0 3.95-3.95v-8.5a3.95 3.95 0 0 0-3.95-3.95h-8.5Zm8.95 1.45a1.15 1.15 0 1 1 0 2.3 1.15 1.15 0 0 1 0-2.3ZM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 1.8A3.2 3.2 0 1 0 12 15.2 3.2 3.2 0 0 0 12 8.8Z" />
         </svg>
       ),
-      url: 'https://www.instagram.com/',
+      url: 'https://www.instagram.com/l3modz?igsh=ZjkzNnhkMmczbzNt/',
       color: 'bg-[#E4405F] hover:bg-[#D03E7F]',
       label: 'Instagram',
     },
@@ -34,7 +34,7 @@ export default function WhatsAppFloat() {
           <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8ZM9.6 15.6V8.4l6.3 3.6-6.3 3.6Z" />
         </svg>
       ),
-      url: 'https://www.youtube.com/',
+      url: 'https://youtube.com/@l3modz?si=Rm9Z6BWDDchQrOgN/',
       color: 'bg-[#FF0000] hover:bg-[#E00000]',
       label: 'YouTube',
     },
