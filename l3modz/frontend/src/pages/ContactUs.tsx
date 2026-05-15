@@ -18,9 +18,9 @@ export default function ContactUs() {
 
   const contactInfo = [
     { icon: Phone, label: 'Phone', value: '+91 98431 99393', href: 'tel:+919843199393' },
-    { icon: Mail, label: 'Email', value: 'support@l3modz.com', href: 'mailto:support@l3modz.com' },
+    { icon: Mail, label: 'Email', value: 'l3modz2022@gmail.com', href: 'mailto:l3modz2022@gmail.com' },
     { icon: MessageCircle, label: 'WhatsApp', value: '+91 98431 99393', href: 'https://wa.me/919843199393' },
-    { icon: MapPin, label: 'Location', value: 'Tamil Nadu, India', href: '#' },
+    { icon: MapPin, label: 'Location', value: 'NO.738, Ramnandha Nagar, Saravanampatti, Coimbatore, Tamil Nadu - 641035', href: '#' },
   ];
 
   return (
