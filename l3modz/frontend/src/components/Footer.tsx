@@ -5,8 +5,8 @@ export default function Footer() {
   return (
     <footer className="border-t border-emerald-200 bg-emerald-50/35 pt-10 pb-6 text-black">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-emerald-100 bg-white/90 p-5">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="h-full rounded-2xl border border-emerald-100 bg-white/90 p-5">
             <div className="mb-2 flex items-center gap-2 text-black">
               <MessageSquareText size={18} />
               <p className="text-sm font-semibold">Customer Service</p>
@@ -14,7 +14,7 @@ export default function Footer() {
             <p className="text-sm text-black">Monday - Saturday : 10am to 6pm IST</p>
           </div>
 
-          <div className="rounded-2xl border border-emerald-100 bg-white/90 p-5">
+          <div className="h-full rounded-2xl border border-emerald-100 bg-white/90 p-5">
             <div className="mb-2 flex items-center gap-2 text-black">
               <PhoneCall size={18} />
               <p className="text-sm font-semibold">Call Us</p>
@@ -24,7 +24,7 @@ export default function Footer() {
             </a>
           </div>
 
-          <div className="rounded-2xl border border-emerald-100 bg-white/90 p-5">
+          <div className="h-full rounded-2xl border border-emerald-100 bg-white/90 p-5">
             <div className="mb-2 flex items-center gap-2 text-black">
               <Navigation size={18} />
               <p className="text-sm font-semibold">Get in Touch</p>
@@ -34,19 +34,19 @@ export default function Footer() {
             </a>
           </div>
 
-          <div className="rounded-2xl border border-emerald-100 bg-white/90 p-5">
+          <div className="h-full rounded-2xl border border-emerald-100 bg-white/90 p-5">
             <div className="mb-2 flex items-center gap-2 text-black">
               <MapPin size={18} />
               <p className="text-sm font-semibold">Address</p>
             </div>
-            <p className="text-sm text-black">Coimbatore, Tamil Nadu, India</p>
+            <p className="text-sm leading-relaxed text-black">NO.738, Ramnandha Nagar, Saravanampatti, Coimbatore, Tamil Nadu - 641035</p>
           </div>
         </div>
 
         <div className="my-8 h-px w-full bg-emerald-100" />
 
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-12">
-          <div className="lg:col-span-7">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 xl:gap-12">
+          <div className="min-w-0 lg:col-span-6">
             <img
               src="/black.png"
               alt="L3 MODZ"
@@ -59,22 +59,22 @@ export default function Footer() {
             <p className="mt-3 max-w-2xl text-base text-black/80">
               Subscribe to get exclusive offers, product launches, and rider updates.
             </p>
-            <form className="mt-5 flex flex-col gap-3 sm:flex-row" onSubmit={(e) => e.preventDefault()}>
+            <form className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-4" onSubmit={(e) => e.preventDefault()}>
               <input
                 type="email"
                 placeholder="Enter your email"
-                className="h-12 w-full rounded-full border border-emerald-200 bg-white px-5 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                className="h-12 min-w-0 flex-1 rounded-full border border-emerald-200 bg-white px-5 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
               />
               <button
                 type="submit"
-                className="h-12 rounded-full bg-emerald-700 px-8 text-sm font-semibold text-white transition hover:bg-emerald-800"
+                className="inline-flex h-12 min-w-[7.5rem] shrink-0 items-center justify-center rounded-full bg-emerald-700 px-6 text-sm font-semibold whitespace-nowrap text-white transition hover:bg-emerald-800 sm:px-8"
               >
                 Sign Up
               </button>
             </form>
           </div>
 
-          <div className="lg:col-span-2">
+          <div className="min-w-0 lg:col-span-3">
             <h4 className="text-lg font-semibold text-black">Company</h4>
             <ul className="mt-4 space-y-2 text-sm text-black/80">
               <li><Link to="/about" className="transition hover:text-black/60">Our Story</Link></li>
@@ -86,7 +86,7 @@ export default function Footer() {
             </ul>
           </div>
 
-          <div className="lg:col-span-3">
+          <div className="min-w-0 lg:col-span-3">
             <h4 className="text-lg font-semibold text-black">Customer Policies</h4>
             <ul className="mt-4 space-y-2 text-sm text-black/80">
               <li><Link to="/products" className="transition hover:text-black/60">Privacy Policy</Link></li>
@@ -97,11 +97,11 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 flex items-center justify-between gap-4 border-t border-emerald-100 pt-6 text-sm text-black/70">
+        <div className="mt-10 flex flex-col gap-4 border-t border-emerald-100 pt-6 text-sm text-black/70 sm:flex-row sm:items-center sm:justify-between">
           <p>&copy; {new Date().getFullYear()} L3 MODZ. Powered by L3Modz</p>
           <div className="flex items-center gap-3">
             <a
-              href="https://www.instagram.com/"
+              href="https://www.instagram.com/l3modz?igsh=ZjkzNnhkMmczbzNt"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Instagram"
@@ -112,7 +112,7 @@ export default function Footer() {
               </svg>
             </a>
             <a
-              href="https://www.youtube.com/"
+              href="https://youtube.com/@l3modz?si=Rm9Z6BWDDchQrOgN"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="YouTube"

@@ -7,8 +7,8 @@ export default function Footer() {
   return (
     <footer className="border-t border-emerald-200 bg-emerald-50/70 pt-10 pb-6">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-emerald-100 bg-white/90 p-5">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="h-full rounded-2xl border border-emerald-100 bg-white/90 p-5">
             <div className="mb-2 flex items-center gap-2 text-emerald-700">
               <MessageSquareText size={18} />
               <p className="text-sm font-semibold">Customer Service</p>
@@ -16,7 +16,7 @@ export default function Footer() {
             <p className="text-sm text-gray-700">Monday - Saturday : 10am to 6pm IST</p>
           </div>
 
-          <div className="rounded-2xl border border-emerald-100 bg-white/90 p-5">
+          <div className="h-full rounded-2xl border border-emerald-100 bg-white/90 p-5">
             <div className="mb-2 flex items-center gap-2 text-emerald-700">
               <PhoneCall size={18} />
               <p className="text-sm font-semibold">Call Us</p>
@@ -26,7 +26,7 @@ export default function Footer() {
             </a>
           </div>
 
-          <div className="rounded-2xl border border-emerald-100 bg-white/90 p-5">
+          <div className="h-full rounded-2xl border border-emerald-100 bg-white/90 p-5">
             <div className="mb-2 flex items-center gap-2 text-emerald-700">
               <Navigation size={18} />
               <p className="text-sm font-semibold">Get in Touch</p>
@@ -36,19 +36,19 @@ export default function Footer() {
             </a>
           </div>
 
-          <div className="rounded-2xl border border-emerald-100 bg-white/90 p-5">
+          <div className="h-full rounded-2xl border border-emerald-100 bg-white/90 p-5">
             <div className="mb-2 flex items-center gap-2 text-emerald-700">
               <MapPin size={18} />
               <p className="text-sm font-semibold">Address</p>
             </div>
-            <p className="text-sm text-gray-700">Coimbatore, Tamil Nadu, India</p>
+            <p className="text-sm leading-relaxed text-gray-700">NO.738, Ramnandha Nagar, Saravanampatti, Coimbatore, Tamil Nadu - 641035</p>
           </div>
         </div>
 
         <div className="my-8 h-px w-full bg-emerald-100" />
 
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-12">
-          <div className="lg:col-span-7">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 xl:gap-12">
+          <div className="min-w-0 lg:col-span-6">
             <img
               src="/black.png"
               alt="L3 MODZ"
@@ -61,22 +61,22 @@ export default function Footer() {
             <p className="mt-3 max-w-2xl text-base text-emerald-900/80">
               Subscribe to get exclusive offers, product launches, and rider updates.
             </p>
-            <form className="mt-5 flex flex-col gap-3 sm:flex-row" onSubmit={(e) => e.preventDefault()}>
+            <form className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-4" onSubmit={(e) => e.preventDefault()}>
               <input
                 type="email"
                 placeholder="Enter your email"
-                className="h-12 w-full rounded-full border border-emerald-200 bg-white px-5 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                className="h-12 min-w-0 flex-1 rounded-full border border-emerald-200 bg-white px-5 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
               />
               <button
                 type="submit"
-                className="h-12 rounded-full bg-emerald-700 px-8 text-sm font-semibold text-white transition hover:bg-emerald-800"
+                className="inline-flex h-12 min-w-[7.5rem] shrink-0 items-center justify-center rounded-full bg-emerald-700 px-6 text-sm font-semibold whitespace-nowrap text-white transition hover:bg-emerald-800 sm:px-8"
               >
                 Sign Up
               </button>
             </form>
           </div>
 
-          <div className="lg:col-span-2">
+          <div className="min-w-0 lg:col-span-3">
             <h4 className="text-lg font-semibold text-emerald-900">Company</h4>
             <ul className="mt-4 space-y-2 text-sm text-emerald-900/80">
               <li><Link href="/about" className="transition hover:text-emerald-700">Our Story</Link></li>
@@ -88,7 +88,7 @@ export default function Footer() {
             </ul>
           </div>
 
-          <div className="lg:col-span-3">
+          <div className="min-w-0 lg:col-span-3">
             <h4 className="text-lg font-semibold text-emerald-900">Customer Policies</h4>
             <ul className="mt-4 space-y-2 text-sm text-emerald-900/80">
               <li><Link href="/privacy" className="transition hover:text-emerald-700">Privacy Policy</Link></li>
@@ -99,19 +99,32 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 flex items-center justify-between gap-4 border-t border-emerald-100 pt-6 text-sm text-emerald-900/70">
+        <div className="mt-10 flex flex-col gap-4 border-t border-emerald-100 pt-6 text-sm text-emerald-900/70 sm:flex-row sm:items-center sm:justify-between">
           <p>&copy; {new Date().getFullYear()} L3 MODZ. Powered by L3Modz</p>
-          <a
-            href="https://www.youtube.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="YouTube"
-            className="grid h-10 w-10 place-items-center rounded-full border border-emerald-200 bg-white text-red-600 transition hover:bg-red-600 hover:text-white"
-          >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
-              <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8ZM9.6 15.6V8.4l6.3 3.6-6.3 3.6Z" />
-            </svg>
-          </a>
+          <div className="flex items-center gap-3">
+            <a
+              href="https://www.instagram.com/l3modz?igsh=ZjkzNnhkMmczbzNt"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram"
+              className="grid h-10 w-10 place-items-center rounded-full border border-emerald-200 bg-white text-pink-600 transition hover:bg-pink-600 hover:text-white"
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+                <path d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2Zm0 1.8A3.95 3.95 0 0 0 3.8 7.75v8.5a3.95 3.95 0 0 0 3.95 3.95h8.5a3.95 3.95 0 0 0 3.95-3.95v-8.5a3.95 3.95 0 0 0-3.95-3.95h-8.5Zm8.95 1.45a1.15 1.15 0 1 1 0 2.3 1.15 1.15 0 0 1 0-2.3ZM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 1.8A3.2 3.2 0 1 0 12 15.2 3.2 3.2 0 0 0 12 8.8Z" />
+              </svg>
+            </a>
+            <a
+              href="https://youtube.com/@l3modz?si=Rm9Z6BWDDchQrOgN"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="YouTube"
+              className="grid h-10 w-10 place-items-center rounded-full border border-emerald-200 bg-white text-red-600 transition hover:bg-red-600 hover:text-white"
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+                <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8ZM9.6 15.6V8.4l6.3 3.6-6.3 3.6Z" />
+              </svg>
+            </a>
+          </div>
         </div>
       </div>
     </footer>

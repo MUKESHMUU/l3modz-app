@@ -58,7 +58,7 @@ export default function ProductDetails() {
     .map((line: string) => line.replace(/^[•*-]\s*/, '').replace(/^\.\s*/, ''));
 
   return (
-    <div className="flex flex-col gap-6 pb-16 lg:grid lg:grid-cols-12 lg:gap-12">
+    <div className="flex flex-col gap-6 pb-16 lg:grid lg:grid-cols-12 lg:gap-10 xl:gap-14">
       {/* Title Section - Mobile order-1, Desktop row-start-1 */}
       <section className="order-1 lg:col-span-5 lg:col-start-8 lg:row-start-1">
         <div className="flex flex-col space-y-6">
@@ -90,13 +90,13 @@ export default function ProductDetails() {
       </section>
 
       {/* Buy Box Section - Mobile order-3, Desktop row-start-3 */}
-      <section className="order-3 lg:col-span-5 lg:col-start-8 lg:row-start-3">
+      <section className="order-3 lg:col-span-5 lg:col-start-8 lg:row-start-2">
         <StickyBuyBox product={product} />
       </section>
 
       {/* Features Section - Mobile order-4, Desktop row-start-2 (below title, above buy box) */}
       {product.features && product.features.length > 0 && (
-        <section className="order-4 lg:col-span-5 lg:col-start-8 lg:row-start-2">
+        <section className="order-4 lg:col-span-5 lg:col-start-8 lg:row-start-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {product.features.map((feat: string, idx: number) => (
               <div key={idx} className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
