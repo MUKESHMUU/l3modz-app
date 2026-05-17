@@ -22,6 +22,7 @@ export interface IProduct extends Document {
   rating: number;
   numReviews: number;
   inStock: boolean;
+  stock?: number; // Quantity in stock
 }
 
 const productSchema = new Schema<IProduct>(
@@ -49,6 +50,7 @@ const productSchema = new Schema<IProduct>(
     rating: { type: Number, default: 0 },
     numReviews: { type: Number, default: 0 },
     inStock: { type: Boolean, default: true },
+    stock: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true }
 );

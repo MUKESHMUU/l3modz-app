@@ -14,6 +14,7 @@ interface Product {
   price: number;
   originalPrice?: number;
   inStock: boolean;
+  stock?: number;
   images?: string[];
   categories?: string[];
   description?: string;
@@ -125,6 +126,7 @@ interface NewProductForm {
   rating: number;
   numReviews: number;
   inStock: boolean;
+  stock: number;
 }
 
 interface ProductEditorDraft {
@@ -143,6 +145,7 @@ interface ProductEditorDraft {
   rating: number;
   numReviews: number;
   inStock: boolean;
+  stock: number;
 }
 
 export default function AdminPanelPage() {
@@ -158,7 +161,8 @@ export default function AdminPanelPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [shippingActionLoading, setShippingActionLoading] = useState(false);
-  const [deliveryPartnerDraft, setDeliveryPartnerDraft] = useState<'Shiprocket' | 'India Post'>('Shiprocket');
+  const [deliveryPartnerDraft, setDeliveryPartnerDraft] = useState<'Shiprocket' | 'India Post' | 'Other'>('Shiprocket');
+  const [customCourierDraft, setCustomCourierDraft] = useState('');
   const [awbDraft, setAwbDraft] = useState('');
   const [trackingUrlDraft, setTrackingUrlDraft] = useState('');
 
@@ -194,6 +198,7 @@ export default function AdminPanelPage() {
     rating: 0,
     numReviews: 0,
     inStock: true,
+    stock: 0,
   });
   const [newProductImages, setNewProductImages] = useState<string[]>(['/file.svg']);
   const [uploadingImageIndex, setUploadingImageIndex] = useState<number | null>(null);
@@ -348,6 +353,7 @@ export default function AdminPanelPage() {
         rating: Math.max(0, Math.min(5, Number(newProduct.rating) || 0)),
         numReviews: Math.max(0, Number(newProduct.numReviews) || 0),
         inStock: newProduct.inStock,
+        stock: Math.max(0, Number(newProduct.stock) || 0),
       };
 
       const res = await fetch('/api/products', {
@@ -378,6 +384,7 @@ export default function AdminPanelPage() {
         rating: 0,
         numReviews: 0,
         inStock: true,
+        stock: 0,
       });
       setNewProductImages(['/file.svg']);
       setMessage('Product created successfully.');
@@ -399,6 +406,7 @@ export default function AdminPanelPage() {
           title: product.title,
           price: Number(product.price),
           inStock: product.inStock,
+          stock: Math.max(0, Number(product.stock) || 0),
           images: (product.images || []).map((img) => img.trim()).filter(Boolean),
         }),
       });
@@ -789,25 +797,40 @@ export default function AdminPanelPage() {
   const closeOrderDetails = () => {
     setSelectedOrder(null);
     setDeliveryPartnerDraft('Shiprocket');
+    setCustomCourierDraft('');
     setAwbDraft('');
     setTrackingUrlDraft('');
   };
 
-  const indiaPostMissingAwb = deliveryPartnerDraft === 'India Post' && !awbDraft.trim();
+  const indiaPostMissingAwb = (deliveryPartnerDraft === 'India Post' || deliveryPartnerDraft === 'Other') && !awbDraft.trim();
+  const customCourierMissing = deliveryPartnerDraft === 'Other' && !customCourierDraft.trim();
 
   const shipOrderWithPartner = async (order: Order) => {
     const trimmedAwb = awbDraft.trim();
     const trimmedTracking = trackingUrlDraft.trim();
+    const trimmedCustomCourier = customCourierDraft.trim();
 
-    if (deliveryPartnerDraft === 'India Post' && !trimmedAwb) {
-      setMessage('India Post tracking/AWB number is required before marking as shipped.');
+    if ((deliveryPartnerDraft === 'India Post' || deliveryPartnerDraft === 'Other') && !trimmedAwb) {
+      setMessage('Tracking/AWB number is required before marking as shipped.');
       return;
     }
 
-    const courierName = deliveryPartnerDraft === 'India Post' ? 'India Post' : order.courier_name || 'Shiprocket';
+    if (deliveryPartnerDraft === 'Other' && !trimmedCustomCourier) {
+      setMessage('Please enter the custom courier partner name.');
+      return;
+    }
+
+    let courierName = 'Shiprocket';
+    if (deliveryPartnerDraft === 'India Post') {
+      courierName = 'India Post';
+    } else if (deliveryPartnerDraft === 'Other') {
+      courierName = trimmedCustomCourier;
+    } else {
+      courierName = order.courier_name || 'Shiprocket';
+    }
 
     await updateOrderStatus(order._id, 'Shipped', {
-      deliveryPartner: deliveryPartnerDraft,
+      deliveryPartner: deliveryPartnerDraft === 'Other' ? 'India Post' : deliveryPartnerDraft,
       courierName,
       awbNumber: trimmedAwb,
       trackingUrl: trimmedTracking,
@@ -1234,6 +1257,14 @@ export default function AdminPanelPage() {
                     onChange={(e) => setNewProduct((prev) => ({ ...prev, installation: e.target.value }))}
                     className="rounded-lg border border-brand-border px-3 py-2"
                   />
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="Stock Quantity"
+                    value={newProduct.stock === 0 ? '' : newProduct.stock}
+                    onChange={(e) => setNewProduct((prev) => ({ ...prev, stock: Number(e.target.value) || 0 }))}
+                    className="rounded-lg border border-brand-border px-3 py-2"
+                  />
                 </div>
 
                 <div className="mt-3 rounded-xl border border-brand-border p-3">
@@ -1349,6 +1380,7 @@ export default function AdminPanelPage() {
                   <tr>
                     <th className="px-4 py-3">Title</th>
                     <th className="px-4 py-3">Selling Price</th>
+                    <th className="px-4 py-3">Stock</th>
                     <th className="px-4 py-3">Images</th>
                     <th className="px-4 py-3">In Stock</th>
                     <th className="px-4 py-3">Actions</th>
@@ -1378,6 +1410,16 @@ export default function AdminPanelPage() {
                           onChange={(e) => setProducts((prev) => prev.map((x) => (x._id === p._id ? { ...x, price: Number(e.target.value) } : x)))}
                           disabled={!isEditing}
                           className="w-32 rounded-lg border border-brand-border px-3 py-2"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          min={0}
+                          value={p.stock || 0}
+                          onChange={(e) => setProducts((prev) => prev.map((x) => (x._id === p._id ? { ...x, stock: Number(e.target.value) || 0 } : x)))}
+                          disabled={!isEditing}
+                          className="w-20 rounded-lg border border-brand-border px-3 py-2"
                         />
                       </td>
                       <td className="px-4 py-3 min-w-[260px]">
@@ -1618,6 +1660,7 @@ export default function AdminPanelPage() {
                           <input type="number" min={0} max={5} step={0.1} value={productDraft.rating} onChange={(e) => setProductDraft({ ...productDraft, rating: Number(e.target.value) })} className="rounded-lg border border-brand-border px-3 py-2" placeholder="Rating" />
                           <input type="number" min={0} value={productDraft.numReviews} onChange={(e) => setProductDraft({ ...productDraft, numReviews: Number(e.target.value) })} className="rounded-lg border border-brand-border px-3 py-2" placeholder="No. of Reviews" />
                         </div>
+                        <input type="number" min={0} value={productDraft.stock} onChange={(e) => setProductDraft({ ...productDraft, stock: Number(e.target.value) || 0 })} className="rounded-lg border border-brand-border px-3 py-2" placeholder="Stock Quantity" />
                         <label className="inline-flex items-center gap-2 rounded-lg border border-brand-border bg-white px-3 py-2 text-sm">
                           <input type="checkbox" checked={productDraft.inStock} onChange={(e) => setProductDraft({ ...productDraft, inStock: e.target.checked })} />
                           In Stock
@@ -1629,7 +1672,8 @@ export default function AdminPanelPage() {
                         <p><span className="font-semibold">Slug:</span> {selectedProduct.slug}</p>
                         <p><span className="font-semibold">Selling Price:</span> ₹{selectedProduct.price.toLocaleString('en-IN')}</p>
                         <p><span className="font-semibold">MRP:</span> ₹{Number(selectedProduct.originalPrice || selectedProduct.price).toLocaleString('en-IN')}</p>
-                        <p><span className="font-semibold">Stock:</span> {selectedProduct.inStock ? 'In Stock' : 'Out of Stock'}</p>
+                        <p><span className="font-semibold">Stock Quantity:</span> {selectedProduct.stock || 0} units</p>
+                        <p><span className="font-semibold">Status:</span> {selectedProduct.inStock ? 'In Stock' : 'Out of Stock'}</p>
                         <p><span className="font-semibold">Rating:</span> {selectedProduct.rating || 0} / 5</p>
                         <p><span className="font-semibold">Reviews:</span> {selectedProduct.numReviews || 0}</p>
                         <p><span className="font-semibold">Created:</span> {selectedProduct.createdAt ? new Date(selectedProduct.createdAt).toLocaleString() : '-'}</p>
@@ -1782,20 +1826,35 @@ export default function AdminPanelPage() {
                   <div className="flex flex-wrap gap-3">
                     <select
                       value={deliveryPartnerDraft}
-                      onChange={(e) => setDeliveryPartnerDraft(e.target.value as 'Shiprocket' | 'India Post')}
+                      onChange={(e) => {
+                        setDeliveryPartnerDraft(e.target.value as 'Shiprocket' | 'India Post' | 'Other');
+                        setCustomCourierDraft('');
+                      }}
                       className="rounded-lg border border-brand-border px-3 py-2"
                       disabled={shippingActionLoading}
                     >
                       <option value="Shiprocket">Shiprocket</option>
                       <option value="India Post">India Post</option>
+                      <option value="Other">Other (Custom Courier)</option>
                     </select>
-                    <input
-                      value={awbDraft}
-                      onChange={(e) => setAwbDraft(e.target.value)}
-                      placeholder="Tracking / AWB Number"
-                      className="min-w-[220px] rounded-lg border border-brand-border px-3 py-2"
-                      disabled={shippingActionLoading}
-                    />
+                    {deliveryPartnerDraft === 'Other' && (
+                      <input
+                        value={customCourierDraft}
+                        onChange={(e) => setCustomCourierDraft(e.target.value)}
+                        placeholder="Enter Courier Name (e.g., DTDC, BlueDart)"
+                        className="min-w-[220px] rounded-lg border border-brand-border px-3 py-2"
+                        disabled={shippingActionLoading}
+                      />
+                    )}
+                    {(deliveryPartnerDraft === 'India Post' || deliveryPartnerDraft === 'Other') && (
+                      <input
+                        value={awbDraft}
+                        onChange={(e) => setAwbDraft(e.target.value)}
+                        placeholder="Tracking / AWB Number"
+                        className="min-w-[220px] rounded-lg border border-brand-border px-3 py-2"
+                        disabled={shippingActionLoading}
+                      />
+                    )}
                     <input
                       value={trackingUrlDraft}
                       onChange={(e) => setTrackingUrlDraft(e.target.value)}
@@ -1803,7 +1862,7 @@ export default function AdminPanelPage() {
                       className="min-w-[260px] rounded-lg border border-brand-border px-3 py-2"
                       disabled={shippingActionLoading}
                     />
-                    <Button onClick={() => shipOrderWithPartner(selectedOrder)} disabled={shippingActionLoading || indiaPostMissingAwb}>
+                    <Button onClick={() => shipOrderWithPartner(selectedOrder)} disabled={shippingActionLoading || indiaPostMissingAwb || (deliveryPartnerDraft === 'Other' && !customCourierDraft)}>
                       <Truck size={14} className="mr-1" /> Mark As Shipped
                     </Button>
                     <Button variant="outline" onClick={() => refreshOrderTracking(selectedOrder._id)} disabled={shippingActionLoading || deliveryPartnerDraft === 'India Post'}>
@@ -1948,6 +2007,7 @@ function buildProductDraft(product: Product): ProductEditorDraft {
     rating: Number(product.rating) || 0,
     numReviews: Number(product.numReviews) || 0,
     inStock: !!product.inStock,
+    stock: Number(product.stock) || 0,
   };
 }
 
@@ -1995,6 +2055,7 @@ function buildProductPayload(draft: ProductEditorDraft) {
     rating: Math.max(0, Math.min(5, Number(draft.rating) || 0)),
     numReviews: Math.max(0, Number(draft.numReviews) || 0),
     inStock: draft.inStock,
+    stock: Math.max(0, Number(draft.stock) || 0),
   };
 }
 

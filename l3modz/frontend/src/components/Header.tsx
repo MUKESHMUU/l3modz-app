@@ -11,6 +11,7 @@ type SearchSuggestion = {
 };
 
 const productCategories = [
+  { name: 'ALL PRODUCTS', path: '/products' },
   { name: 'FOOTREST', path: '/products?category=footrest' },
   { name: 'RADIATOR GUARDS', path: '/products?category=radiator-guards' },
   { name: 'CARRIERS', path: '/products?category=carriers' },
@@ -46,11 +47,12 @@ export default function Header() {
       navigate(`/products?search=${encodeURIComponent(searchQuery)}`);
       setIsMenuOpen(false);
       setShowSuggestions(false);
+      setSearchQuery('');
     }
   };
 
   const handleSuggestionSelect = (suggestion: SearchSuggestion) => {
-    setSearchQuery(suggestion.title);
+    setSearchQuery('');
     setShowSuggestions(false);
     setIsMenuOpen(false);
     navigate(`/products/${suggestion.slug || suggestion._id}`);
@@ -61,6 +63,7 @@ export default function Header() {
     navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
     setShowSuggestions(false);
     setIsMenuOpen(false);
+    setSearchQuery('');
   };
 
   useEffect(() => {
@@ -121,11 +124,11 @@ export default function Header() {
             <Link to="/" aria-label="L3 MODZ home" className="block w-full">
               <div className="h-12 md:h-14 overflow-hidden flex items-center">
                 <img
-                  src="/black.png"
+                  src="/white.png"
                   alt="L3 MODZ"
                   className="h-full w-auto object-contain"
                   onError={(e) => {
-                    e.currentTarget.src = '/l3modz-logo-dark.svg';
+                    e.currentTarget.src = '/l3modz-logo-light.svg';
                   }}
                 />
               </div>

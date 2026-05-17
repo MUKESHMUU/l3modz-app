@@ -48,11 +48,11 @@ export default function Footer() {
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 xl:gap-12">
           <div className="min-w-0 lg:col-span-6">
             <img
-              src="/black.png"
+              src="/l3modz-logo-light.svg"
               alt="L3 MODZ"
               className="h-14 w-auto"
               onError={(e) => {
-                e.currentTarget.src = '/l3modz-logo-dark.svg';
+                e.currentTarget.src = '/l3modz-logo-light.svg';
               }}
             />
             <h3 className="text-3xl font-semibold tracking-tight text-black">Join Our Newsletter</h3>
