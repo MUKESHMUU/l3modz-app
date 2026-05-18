@@ -65,11 +65,11 @@ export default function Footer() {
               <input
                 type="email"
                 placeholder="Enter your email"
-                className="h-14 min-w-0 flex-1 rounded-full border border-emerald-200 bg-white px-6 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                className="h-16 min-w-0 flex-1 rounded-full border border-emerald-200 bg-white px-6 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 sm:h-14"
               />
               <button
                 type="submit"
-                className="inline-flex h-14 w-full shrink-0 items-center justify-center rounded-full bg-emerald-700 px-6 text-base font-semibold whitespace-nowrap text-white transition hover:bg-emerald-800 sm:w-auto sm:min-w-[10rem] sm:px-8"
+                className="inline-flex h-16 w-full shrink-0 items-center justify-center rounded-full bg-emerald-700 px-6 text-base font-semibold whitespace-nowrap text-white transition hover:bg-emerald-800 sm:w-auto sm:min-w-[10rem] sm:px-8 sm:h-14"
               >
                 Sign Up
               </button>
