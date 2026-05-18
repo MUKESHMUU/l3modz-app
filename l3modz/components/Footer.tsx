@@ -65,7 +65,7 @@ export default function Footer() {
               <input
                 type="email"
                 placeholder="Enter your email"
-                className="h-14 min-w-0 flex-1 rounded-full border border-emerald-200 bg-white px-5 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                className="h-14 min-w-0 flex-1 rounded-full border border-emerald-200 bg-white px-6 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
               />
               <button
                 type="submit"
