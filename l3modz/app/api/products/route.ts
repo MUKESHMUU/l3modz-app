@@ -52,9 +52,20 @@ export async function POST(req: Request) {
 
     await dbConnect();
     const body = await req.json();
+    const rawStock = body?.stock;
+    const stockValue = rawStock === undefined || rawStock === null || rawStock === '' ? 0 : Number(rawStock);
+    if (!Number.isFinite(stockValue) || stockValue < 0) {
+      return NextResponse.json({ message: 'Stock quantity must be a non-negative number' }, { status: 400 });
+    }
+    const stock = Math.max(0, stockValue);
+    const inStock = typeof body?.inStock === 'boolean' ? body.inStock : stock > 0;
     
     // expecting full product payload
-    const product = await Product.create(body);
+    const product = await Product.create({
+      ...body,
+      stock,
+      inStock,
+    });
     return NextResponse.json(product, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ message: error.message }, { status: 500 });

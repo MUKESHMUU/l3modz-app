@@ -48,7 +48,7 @@ export interface IOrder extends Document {
   packageLengthCm?: number;
   packageBreadthCm?: number;
   packageHeightCm?: number;
-  deliveryPartner?: 'Shiprocket' | 'India Post';
+  deliveryPartner?: 'Shiprocket' | 'India Post' | 'Other';
   shipment_id?: string;
   shiprocket_order_id?: string;
   courier_name?: string;
@@ -116,7 +116,7 @@ const orderSchema = new Schema<IOrder>(
     packageLengthCm: { type: Number },
     packageBreadthCm: { type: Number },
     packageHeightCm: { type: Number },
-    deliveryPartner: { type: String, enum: ['Shiprocket', 'India Post'], default: 'Shiprocket' },
+    deliveryPartner: { type: String, enum: ['Shiprocket', 'India Post', 'Other'], default: 'Shiprocket' },
     shipment_id: { type: String },
     shiprocket_order_id: { type: String },
     courier_name: { type: String },

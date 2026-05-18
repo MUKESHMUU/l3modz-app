@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, ShoppingCart, Menu, X, User, ChevronDown } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
+import logoWhite from '@/assets/Logo For PNG.png';
 
 type SearchSuggestion = {
   _id: string;
@@ -11,7 +12,7 @@ type SearchSuggestion = {
 };
 
 const productCategories = [
-  { name: 'ALL PRODUCTS', path: '/products' },
+  { name: 'All Products', path: '/products' },
   { name: 'FOOTREST', path: '/products?category=footrest' },
   { name: 'RADIATOR GUARDS', path: '/products?category=radiator-guards' },
   { name: 'CARRIERS', path: '/products?category=carriers' },
@@ -44,26 +45,34 @@ export default function Header() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/products?search=${encodeURIComponent(searchQuery)}`);
-      setIsMenuOpen(false);
-      setShowSuggestions(false);
+      const query = searchQuery.trim();
+      navigate(`/products?search=${encodeURIComponent(query)}`);
       setSearchQuery('');
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setIsMenuOpen(false);
+      setIsMobileSearchOpen(false);
     }
   };
 
   const handleSuggestionSelect = (suggestion: SearchSuggestion) => {
     setSearchQuery('');
+    setSuggestions([]);
     setShowSuggestions(false);
     setIsMenuOpen(false);
+    setIsMobileSearchOpen(false);
     navigate(`/products/${suggestion.slug || suggestion._id}`);
   };
 
   const handleSearchAllSelect = () => {
-    if (!searchQuery.trim()) return;
-    navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+    const query = searchQuery.trim();
+    if (!query) return;
+    navigate(`/products?search=${encodeURIComponent(query)}`);
+    setSearchQuery('');
+    setSuggestions([]);
     setShowSuggestions(false);
     setIsMenuOpen(false);
-    setSearchQuery('');
+    setIsMobileSearchOpen(false);
   };
 
   useEffect(() => {
@@ -124,7 +133,7 @@ export default function Header() {
             <Link to="/" aria-label="L3 MODZ home" className="block w-full">
               <div className="h-12 md:h-14 overflow-hidden flex items-center">
                 <img
-                  src="/white.png"
+                  src={logoWhite}
                   alt="L3 MODZ"
                   className="h-full w-auto object-contain"
                   onError={(e) => {

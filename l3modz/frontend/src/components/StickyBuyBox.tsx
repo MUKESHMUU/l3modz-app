@@ -42,6 +42,9 @@ export default function StickyBuyBox({ product }: { product: any }) {
           ) : (
             <div className="mt-5 text-red-500 font-medium text-sm">Out of Stock</div>
           )}
+          <div className="mt-2 text-xs text-gray-500">
+            Stock Quantity: {typeof product.stock === 'number' ? product.stock : 0}
+          </div>
         </div>
 
         <div className="w-full sm:w-48 shrink-0 flex flex-col gap-3">

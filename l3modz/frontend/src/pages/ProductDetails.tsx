@@ -80,6 +80,9 @@ export default function ProductDetails() {
                   {product.numReviews} Reviews
                 </a>
               </div>
+              <p className="mt-3 text-sm text-gray-600">
+                Stock Quantity: <span className="font-semibold text-brand-text">{typeof product.stock === 'number' ? product.stock : 0}</span>
+              </p>
             </div>
           </div>
         </section>
@@ -210,6 +213,9 @@ export default function ProductDetails() {
                     {product.numReviews} Reviews
                   </a>
                 </div>
+                <p className="mt-3 text-sm text-gray-600">
+                  Stock Quantity: <span className="font-semibold text-brand-text">{typeof product.stock === 'number' ? product.stock : 0}</span>
+                </p>
               </div>
             </div>
           </section>

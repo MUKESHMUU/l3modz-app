@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { Star, ShoppingCart } from 'lucide-react';
 import Button from './Button';
 
@@ -13,6 +12,8 @@ interface ProductCardProps {
     images: string[];
     rating: number;
     numReviews: number;
+    inStock?: boolean;
+    stock?: number;
   };
 }
 
@@ -61,6 +62,9 @@ export default function ProductCard({ product }: ProductCardProps) {
             {product.originalPrice && (
               <span className="text-xs text-gray-400 line-through">₹{product.originalPrice.toLocaleString('en-IN')}</span>
             )}
+            <span className="mt-1 text-xs text-gray-500">
+              Stock: {typeof product.stock === 'number' ? `${product.stock} units` : product.inStock === false ? 'Out of stock' : 'Available'}
+            </span>
           </div>
           <Button variant="secondary" size="sm" className="!px-3 !py-2 rounded-full shadow-sm" aria-label="Add to cart">
             <ShoppingCart size={18} />

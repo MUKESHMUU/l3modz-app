@@ -34,8 +34,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     await dbConnect();
     const id = (await params).id;
     const body = await req.json();
+    const rawStock = body?.stock;
+    const stockValue = rawStock === undefined || rawStock === null || rawStock === '' ? 0 : Number(rawStock);
+    if (!Number.isFinite(stockValue) || stockValue < 0) {
+      return NextResponse.json({ message: 'Stock quantity must be a non-negative number' }, { status: 400 });
+    }
+    const stock = Math.max(0, stockValue);
+    const inStock = typeof body?.inStock === 'boolean' ? body.inStock : stock > 0;
 
-    const product = await Product.findByIdAndUpdate(id, body, { new: true });
+    const product = await Product.findByIdAndUpdate(id, { ...body, stock, inStock }, { new: true });
     if (!product) {
       return NextResponse.json({ message: 'Product not found' }, { status: 404 });
     }

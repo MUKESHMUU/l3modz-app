@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 
 type AdminTab = 'dashboard' | 'categories' | 'products' | 'orders' | 'users';
 const ALLOWED_CATEGORIES = ['footrest', 'radiator-guards', 'carriers', 'accessories'] as const;
+const DELIVERY_PARTNERS = ['Shiprocket', 'India Post', 'Other'] as const;
 
 interface Product {
   _id: string;
@@ -56,7 +57,7 @@ interface Order {
     pincode?: string;
   };
   courier_name?: string;
-  deliveryPartner?: 'Shiprocket' | 'India Post';
+  deliveryPartner?: 'Shiprocket' | 'India Post' | 'Other';
   AWB_number?: string;
   tracking_url?: string;
   delivery_status?: string;
@@ -470,7 +471,7 @@ export default function AdminPanelPage() {
     orderId: string,
     status: string,
     shippingDetails?: {
-      deliveryPartner?: 'Shiprocket' | 'India Post';
+      deliveryPartner?: 'Shiprocket' | 'India Post' | 'Other';
       courierName?: string;
       awbNumber?: string;
       trackingUrl?: string;
@@ -510,7 +511,7 @@ export default function AdminPanelPage() {
 
   const updateOrderPartner = async (
     orderId: string,
-    deliveryPartner: 'Shiprocket' | 'India Post'
+    deliveryPartner: 'Shiprocket' | 'India Post' | 'Other'
   ) => {
     await updateOrderStatus(orderId, orders.find((o) => o._id === orderId)?.status || 'Pending', {
       deliveryPartner,
@@ -789,6 +790,7 @@ export default function AdminPanelPage() {
   const openOrderDetails = (order: Order) => {
     setSelectedOrder(order);
     setDeliveryPartnerDraft(order.deliveryPartner || 'Shiprocket');
+    setCustomCourierDraft(order.deliveryPartner === 'Other' ? (order.courier_name || '') : '');
     setAwbDraft(order.AWB_number || '');
     setTrackingUrlDraft(order.tracking_url || '');
     setMessage('');
@@ -830,7 +832,7 @@ export default function AdminPanelPage() {
     }
 
     await updateOrderStatus(order._id, 'Shipped', {
-      deliveryPartner: deliveryPartnerDraft === 'Other' ? 'India Post' : deliveryPartnerDraft,
+      deliveryPartner: deliveryPartnerDraft,
       courierName,
       awbNumber: trimmedAwb,
       trackingUrl: trimmedTracking,
@@ -1545,12 +1547,13 @@ export default function AdminPanelPage() {
                       <td className="px-4 py-3">
                         <select
                           value={o.deliveryPartner || 'Shiprocket'}
-                          onChange={(e) => updateOrderPartner(o._id, e.target.value as 'Shiprocket' | 'India Post')}
+                          onChange={(e) => updateOrderPartner(o._id, e.target.value as 'Shiprocket' | 'India Post' | 'Other')}
                           className="rounded-lg border border-brand-border px-3 py-2"
                           disabled={savingId === o._id}
                         >
-                          <option value="Shiprocket">Shiprocket</option>
-                          <option value="India Post">India Post</option>
+                          {DELIVERY_PARTNERS.map((partner) => (
+                            <option key={partner} value={partner}>{partner}</option>
+                          ))}
                         </select>
                       </td>
                       <td className="px-4 py-3 text-xs">
@@ -1841,7 +1844,7 @@ export default function AdminPanelPage() {
                       <input
                         value={customCourierDraft}
                         onChange={(e) => setCustomCourierDraft(e.target.value)}
-                        placeholder="Enter Courier Name (e.g., DTDC, BlueDart)"
+                        placeholder="Enter Courier Partner (e.g., DTDC, BlueDart)"
                         className="min-w-[220px] rounded-lg border border-brand-border px-3 py-2"
                         disabled={shippingActionLoading}
                       />
@@ -1862,13 +1865,13 @@ export default function AdminPanelPage() {
                       className="min-w-[260px] rounded-lg border border-brand-border px-3 py-2"
                       disabled={shippingActionLoading}
                     />
-                    <Button onClick={() => shipOrderWithPartner(selectedOrder)} disabled={shippingActionLoading || indiaPostMissingAwb || (deliveryPartnerDraft === 'Other' && !customCourierDraft)}>
+                    <Button onClick={() => shipOrderWithPartner(selectedOrder)} disabled={shippingActionLoading || indiaPostMissingAwb || customCourierMissing}>
                       <Truck size={14} className="mr-1" /> Mark As Shipped
                     </Button>
-                    <Button variant="outline" onClick={() => refreshOrderTracking(selectedOrder._id)} disabled={shippingActionLoading || deliveryPartnerDraft === 'India Post'}>
+                    <Button variant="outline" onClick={() => refreshOrderTracking(selectedOrder._id)} disabled={shippingActionLoading || deliveryPartnerDraft !== 'Shiprocket'}>
                       <RefreshCw size={14} className="mr-1" /> Refresh Tracking
                     </Button>
-                    <Button variant="outline" onClick={() => createReturnPickupForOrder(selectedOrder._id)} disabled={shippingActionLoading || deliveryPartnerDraft === 'India Post'}>
+                    <Button variant="outline" onClick={() => createReturnPickupForOrder(selectedOrder._id)} disabled={shippingActionLoading || deliveryPartnerDraft !== 'Shiprocket'}>
                       <Truck size={14} className="mr-1" /> Create Return Pickup
                     </Button>
                   </div>

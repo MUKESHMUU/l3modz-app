@@ -46,7 +46,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     } = await req.json();
 
     const normalizedPartner =
-      deliveryPartner === 'India Post' || deliveryPartner === 'Shiprocket'
+      deliveryPartner === 'India Post' || deliveryPartner === 'Shiprocket' || deliveryPartner === 'Other'
         ? deliveryPartner
         : undefined;
 
@@ -72,7 +72,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     order.status = status;
 
     if (status === 'Shipped') {
-      const activePartner = (order.deliveryPartner || 'Shiprocket') as 'Shiprocket' | 'India Post';
+      const activePartner = (order.deliveryPartner || 'Shiprocket') as 'Shiprocket' | 'India Post' | 'Other';
       order.deliveryPartner = activePartner;
 
       if (activePartner === 'Shiprocket') {
@@ -87,11 +87,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       } else {
         const finalAwb = order.AWB_number?.trim();
         if (!finalAwb) {
-          return NextResponse.json({ message: 'India Post shipments require a tracking/AWB number before marking as shipped.' }, { status: 400 });
+          return NextResponse.json({ message: 'Custom courier shipments require a tracking/AWB number before marking as shipped.' }, { status: 400 });
         }
 
         order.AWB_number = finalAwb;
-        order.courier_name = order.courier_name || 'India Post';
+        if (activePartner === 'India Post') {
+          order.courier_name = order.courier_name || 'India Post';
+        } else if (!order.courier_name?.trim()) {
+          return NextResponse.json({ message: 'Custom courier shipments require a courier name.' }, { status: 400 });
+        }
         order.delivery_status = order.delivery_status || 'shipped';
         order.shiprocketSyncError = '';
       }

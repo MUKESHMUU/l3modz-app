@@ -13,7 +13,11 @@ export default function Header() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/products?search=${encodeURIComponent(searchQuery)}`);
+      const query = searchQuery.trim();
+      router.push(`/products?search=${encodeURIComponent(query)}`);
+      setSearchQuery('');
+      setIsMenuOpen(false);
+      setIsMobileSearchOpen(false);
     }
   };
 
