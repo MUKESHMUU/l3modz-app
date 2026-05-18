@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import ProductGallery from '@/components/ProductGallery';
 import StickyBuyBox from '@/components/StickyBuyBox';
 import CompatibilityChecker from '@/components/CompatibilityChecker';
@@ -8,6 +8,7 @@ import { Star, CheckCircle, List, Settings } from 'lucide-react';
 export default function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -57,6 +58,8 @@ export default function ProductDetails() {
     .filter(Boolean)
     .map((line: string) => line.replace(/^[•*-]\s*/, '').replace(/^\.\s*/, ''));
 
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
   return (
     <>
       <div className="flex flex-col gap-6 pb-16 lg:hidden">
@@ -80,9 +83,11 @@ export default function ProductDetails() {
                   {product.numReviews} Reviews
                 </a>
               </div>
-              <p className="mt-3 text-sm text-gray-600">
-                Stock Quantity: <span className="font-semibold text-brand-text">{typeof product.stock === 'number' ? product.stock : 0}</span>
-              </p>
+              {isAdminRoute && (
+                <p className="mt-3 text-sm text-gray-600">
+                  Stock Quantity: <span className="font-semibold text-brand-text">{typeof product.stock === 'number' ? product.stock : 0}</span>
+                </p>
+              )}
             </div>
           </div>
         </section>
@@ -95,7 +100,7 @@ export default function ProductDetails() {
           <StickyBuyBox product={product} />
         </section>
 
-        {product.features && product.features.length > 0 && (
+        {isAdminRoute && product.features && product.features.length > 0 && (
           <section className="order-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {product.features.map((feat: string, idx: number) => (
@@ -213,9 +218,11 @@ export default function ProductDetails() {
                     {product.numReviews} Reviews
                   </a>
                 </div>
-                <p className="mt-3 text-sm text-gray-600">
-                  Stock Quantity: <span className="font-semibold text-brand-text">{typeof product.stock === 'number' ? product.stock : 0}</span>
-                </p>
+                {isAdminRoute && (
+                  <p className="mt-3 text-sm text-gray-600">
+                    Stock Quantity: <span className="font-semibold text-brand-text">{typeof product.stock === 'number' ? product.stock : 0}</span>
+                  </p>
+                )}
               </div>
             </div>
           </section>
@@ -224,7 +231,7 @@ export default function ProductDetails() {
             <StickyBuyBox product={product} />
           </section>
 
-          {product.features && product.features.length > 0 && (
+          {isAdminRoute && product.features && product.features.length > 0 && (
             <section>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {product.features.map((feat: string, idx: number) => (

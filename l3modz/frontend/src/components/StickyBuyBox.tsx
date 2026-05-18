@@ -1,6 +1,7 @@
 "use client";
 import { useState } from 'react';
 import { ShoppingCart, Zap, ShieldCheck } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import Button from './Button';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -10,6 +11,8 @@ export default function StickyBuyBox({ product }: { product: any }) {
   const [qty, setQty] = useState(1);
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
   const handleAddToCart = () => {
     addToCart(product, qty);
@@ -35,16 +38,20 @@ export default function StickyBuyBox({ product }: { product: any }) {
             </div>
           )}
 
-          {product.inStock ? (
-            <div className="mt-5 flex items-center text-green-600 font-medium text-sm">
-              <ShieldCheck size={18} className="mr-1" /> In Stock &amp; Ready to Dispatch
-            </div>
-          ) : (
-            <div className="mt-5 text-red-500 font-medium text-sm">Out of Stock</div>
+          {isAdminRoute && (
+            <>
+              {product.inStock ? (
+                <div className="mt-5 flex items-center text-green-600 font-medium text-sm">
+                  <ShieldCheck size={18} className="mr-1" /> In Stock &amp; Ready to Dispatch
+                </div>
+              ) : (
+                <div className="mt-5 text-red-500 font-medium text-sm">Out of Stock</div>
+              )}
+              <div className="mt-2 text-xs text-gray-500">
+                Stock Quantity: {typeof product.stock === 'number' ? product.stock : 0}
+              </div>
+            </>
           )}
-          <div className="mt-2 text-xs text-gray-500">
-            Stock Quantity: {typeof product.stock === 'number' ? product.stock : 0}
-          </div>
         </div>
 
         <div className="w-full sm:w-48 shrink-0 flex flex-col gap-3">

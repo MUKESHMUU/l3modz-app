@@ -1,6 +1,8 @@
+"use client";
 import Link from 'next/link';
 import { Star, ShoppingCart } from 'lucide-react';
 import Button from './Button';
+import { usePathname } from 'next/navigation';
 
 interface ProductCardProps {
   product: {
@@ -21,6 +23,9 @@ export default function ProductCard({ product }: ProductCardProps) {
   const discount = product.originalPrice 
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) 
     : 0;
+
+  const pathname = usePathname();
+  const isAdminRoute = typeof pathname === 'string' && pathname.startsWith('/admin');
 
   return (
     <div className="bg-white border border-brand-border rounded-2xl overflow-hidden hover:shadow-lg transition-shadow duration-300 group flex flex-col h-full">
@@ -62,9 +67,11 @@ export default function ProductCard({ product }: ProductCardProps) {
             {product.originalPrice && (
               <span className="text-xs text-gray-400 line-through">₹{product.originalPrice.toLocaleString('en-IN')}</span>
             )}
-            <span className="mt-1 text-xs text-gray-500">
-              Stock: {typeof product.stock === 'number' ? `${product.stock} units` : product.inStock === false ? 'Out of stock' : 'Available'}
-            </span>
+            {isAdminRoute && (
+              <span className="mt-1 text-xs text-gray-500">
+                Stock: {typeof product.stock === 'number' ? `${product.stock} units` : product.inStock === false ? 'Out of stock' : 'Available'}
+              </span>
+            )}
           </div>
           <Button variant="secondary" size="sm" className="!px-3 !py-2 rounded-full shadow-sm" aria-label="Add to cart">
             <ShoppingCart size={18} />

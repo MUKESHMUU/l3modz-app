@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Star, ShoppingCart } from 'lucide-react';
 import Button from './Button';
 import toast from 'react-hot-toast';
@@ -21,6 +21,8 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
   const discount = product.originalPrice 
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) 
     : 0;
@@ -70,9 +72,11 @@ export default function ProductCard({ product }: ProductCardProps) {
             {product.originalPrice && (
               <span className="text-xs text-gray-400 line-through">₹{product.originalPrice.toLocaleString('en-IN')}</span>
             )}
-            <span className="mt-1 text-xs text-gray-500">
-              Stock: {typeof product.stock === 'number' ? `${product.stock} units` : product.inStock === false ? 'Out of stock' : 'Available'}
-            </span>
+            {isAdminRoute && (
+              <span className="mt-1 text-xs text-gray-500">
+                Stock: {typeof product.stock === 'number' ? `${product.stock} units` : product.inStock === false ? 'Out of stock' : 'Available'}
+              </span>
+            )}
           </div>
           <Button
             variant="secondary"
