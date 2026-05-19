@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Button from '@/components/Button';
+import { apiFetch } from '@/lib/api';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
@@ -19,7 +20,7 @@ export default function AdminLoginPage() {
       const timeoutId = window.setTimeout(() => controller.abort(), 8000);
 
       try {
-        const res = await fetch('/api/admin/session', {
+        const res = await apiFetch('/api/admin/session', {
           credentials: 'include',
           signal: controller.signal,
           cache: 'no-store',
@@ -53,7 +54,7 @@ export default function AdminLoginPage() {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/admin/password-login', {
+      const res = await apiFetch('/api/auth/admin/password-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

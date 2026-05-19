@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button';
+import { apiFetch } from '@/lib/api';
 import { LogOut, Package } from 'lucide-react';
 
 export default function ProfilePage() {
@@ -11,7 +12,7 @@ export default function ProfilePage() {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    await apiFetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     window.dispatchEvent(new Event('l3-auth-changed'));
     navigate('/login');
   };
@@ -20,13 +21,13 @@ export default function ProfilePage() {
     async function fetchOrders() {
       setLoadingOrders(true);
       try {
-        const sessionRes = await fetch('/api/auth/session', { credentials: 'include', cache: 'no-store' });
+        const sessionRes = await apiFetch('/api/auth/session', { credentials: 'include', cache: 'no-store' });
         if (sessionRes.ok) {
           const sessionData = await sessionRes.json();
           setUser(sessionData?.user ? { name: sessionData.user.name, email: sessionData.user.email } : null);
         }
 
-        const res = await fetch('/api/orders', { credentials: 'include' });
+        const res = await apiFetch('/api/orders', { credentials: 'include' });
         if (!res.ok) return;
         const data = await res.json();
         setOrders(Array.isArray(data) ? data : []);

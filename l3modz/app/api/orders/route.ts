@@ -74,10 +74,10 @@ export async function POST(req: Request) {
 
     const razorpayConfigured = Boolean(
       process.env.RAZORPAY_KEY_ID &&
-      process.env.RAZORPAY_KEY_SECRET &&
-      process.env.RAZORPAY_KEY_ID !== 'dummy_key' &&
-      process.env.RAZORPAY_KEY_SECRET !== 'dummy_secret'
+      (process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_SECRET) &&
+      process.env.RAZORPAY_KEY_ID !== 'dummy_key'
     );
+    console.info('[Orders API] Razorpay configured:', razorpayConfigured);
 
     if (!razorpayConfigured) {
       return NextResponse.json({ message: 'Razorpay is not configured yet. Add valid Razorpay keys to continue.' }, { status: 400 });
@@ -125,6 +125,7 @@ export async function POST(req: Request) {
     };
 
     const rzpOrder = await razorpay.orders.create(options);
+    console.info('[Orders API] Created Razorpay order id:', rzpOrder.id);
 
     order.paymentResult = {
       razorpay_order_id: rzpOrder.id,

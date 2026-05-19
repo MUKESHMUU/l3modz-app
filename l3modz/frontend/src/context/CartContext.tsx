@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { apiFetch } from '@/lib/api';
 
 export interface CartItem {
   id: string;
@@ -56,7 +57,7 @@ async function resolveCartOwnerKey() {
   if (typeof window === 'undefined') return 'guest';
 
   try {
-    const res = await fetch('/api/auth/session', {
+    const res = await apiFetch('/api/auth/session', {
       credentials: 'include',
       cache: 'no-store',
     });

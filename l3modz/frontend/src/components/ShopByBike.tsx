@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiFetch } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, Bike, Car, X, Search } from 'lucide-react';
 
@@ -105,7 +106,7 @@ export default function ShopByBike() {
   useEffect(() => {
     async function fetch_() {
       try {
-        const res = await fetch('/api/bikes');
+        const res = await apiFetch('/api/bikes');
         if (!res.ok) throw new Error('Failed to load bike data');
         const data = await res.json();
         setBrands(data.brands || []);

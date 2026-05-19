@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PackageSearch, ShoppingBag, Users, IndianRupee, LogOut, RefreshCw, Save, Trash2, Plus, Pencil, XCircle, Eye, Truck, ClipboardList, Package } from 'lucide-react';
 import Button from '@/components/Button';
+import { apiFetch } from '@/lib/api';
 import type { ReactNode } from 'react';
 
 type AdminTab = 'dashboard' | 'categories' | 'products' | 'orders' | 'users';
@@ -215,11 +216,11 @@ export default function AdminPanelPage() {
 
     try {
       const [sessionRes, productsRes, ordersRes, usersRes, categoriesRes] = await Promise.all([
-        fetch('/api/admin/session', { credentials: 'include' }),
-        fetch('/api/products', { credentials: 'include' }),
-        fetch('/api/admin/orders', { credentials: 'include' }),
-        fetch('/api/admin/users', { credentials: 'include' }),
-        fetch('/api/categories', { credentials: 'include' }),
+        apiFetch('/api/admin/session', { credentials: 'include' }),
+        apiFetch('/api/products', { credentials: 'include' }),
+        apiFetch('/api/admin/orders', { credentials: 'include' }),
+        apiFetch('/api/admin/users', { credentials: 'include' }),
+        apiFetch('/api/categories', { credentials: 'include' }),
       ]);
 
       if (!sessionRes.ok) {
@@ -300,7 +301,7 @@ export default function AdminPanelPage() {
   const recentProducts = useMemo(() => products.slice(0, 5), [products]);
 
   const logout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    await apiFetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     navigate('/admin/login', { replace: true });
   };
 
@@ -357,7 +358,7 @@ export default function AdminPanelPage() {
         stock: Math.max(0, Number(newProduct.stock) || 0),
       };
 
-      const res = await fetch('/api/products', {
+      const res = await apiFetch('/api/products', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -399,7 +400,7 @@ export default function AdminPanelPage() {
     setMessage('');
 
     try {
-      const res = await fetch(`/api/products/${product._id}`, {
+      const res = await apiFetch(`/api/products/${product._id}`, {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -432,7 +433,7 @@ export default function AdminPanelPage() {
     setSavingId(id);
     setMessage('');
     try {
-      const res = await fetch(`/api/products/${id}`, { credentials: 'include' });
+      const res = await apiFetch(`/api/products/${id}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to reload product');
       const fresh = await res.json();
       setProducts((prev) => prev.map((p) => (p._id === id ? fresh : p)));
@@ -450,7 +451,7 @@ export default function AdminPanelPage() {
     setMessage('');
 
     try {
-      const res = await fetch(`/api/products/${id}`, {
+      const res = await apiFetch(`/api/products/${id}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -481,7 +482,7 @@ export default function AdminPanelPage() {
     setMessage('');
 
     try {
-      const res = await fetch(`/api/orders/${orderId}`, {
+      const res = await apiFetch(`/api/orders/${orderId}`, {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -523,7 +524,7 @@ export default function AdminPanelPage() {
     setMessage('');
 
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
+      const res = await apiFetch(`/api/admin/users/${userId}`, {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -604,7 +605,7 @@ export default function AdminPanelPage() {
     try {
       const responses = await Promise.all(
         DEFAULT_HOME_CATEGORY_CARDS.map((card) =>
-          fetch('/api/categories', {
+          apiFetch('/api/categories', {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
@@ -648,7 +649,7 @@ export default function AdminPanelPage() {
 
     try {
       const isEdit = !!item._id;
-      const res = await fetch(isEdit ? `/api/categories/${item._id}` : '/api/categories', {
+      const res = await apiFetch(isEdit ? `/api/categories/${item._id}` : '/api/categories', {
         method: isEdit ? 'PUT' : 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -676,7 +677,7 @@ export default function AdminPanelPage() {
       const form = new FormData();
       form.append('file', file);
 
-      const res = await fetch('/api/admin/upload-image', {
+      const res = await apiFetch('/api/admin/upload-image', {
         method: 'POST',
         credentials: 'include',
         body: form,
@@ -710,7 +711,7 @@ export default function AdminPanelPage() {
       const form = new FormData();
       form.append('file', file);
 
-      const res = await fetch('/api/admin/upload-image', {
+      const res = await apiFetch('/api/admin/upload-image', {
         method: 'POST',
         credentials: 'include',
         body: form,

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { apiFetch } from '@/lib/api';
 import { Link } from "react-router-dom";
 import ProductCard from "@/components/ProductCard";
 import Button from "@/components/Button";
@@ -27,8 +28,8 @@ export default function Home() {
     async function fetchHomeData() {
       try {
         const [productsRes, categoriesRes] = await Promise.all([
-          fetch("/api/products?limit=4"),
-          fetch('/api/categories'),
+          apiFetch("/api/products?limit=4"),
+          apiFetch('/api/categories'),
         ]);
 
         if (productsRes.ok) {

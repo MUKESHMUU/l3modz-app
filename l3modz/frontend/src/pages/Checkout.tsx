@@ -3,13 +3,35 @@ import { clearBuyNowItem, getBuyNowItem, useCart } from '@/hooks/useCart';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button';
 import toast from 'react-hot-toast';
+import { apiFetch } from '@/lib/api';
 
 export default function CheckoutPage() {
   const { items, clearCart, isLoaded } = useCart();
   const navigate = useNavigate();
   const buyNowItem = getBuyNowItem();
   const checkoutItems = buyNowItem ? [buyNowItem] : items;
-  const razorpayConfigured = Boolean(import.meta.env.VITE_RAZORPAY_KEY_ID && import.meta.env.VITE_RAZORPAY_KEY_ID !== 'dummy_key');
+  const [razorpayConfigured, setRazorpayConfigured] = useState<boolean>(Boolean(import.meta.env.VITE_RAZORPAY_KEY_ID && import.meta.env.VITE_RAZORPAY_KEY_ID !== 'dummy_key'));
+
+  // At runtime, prefer fetching the public key from backend so production builds don't rely on local .env
+  useEffect(() => {
+    let mounted = true;
+    const checkKey = async () => {
+      try {
+        // Use apiFetch which respects VITE_API_URL when configured
+        const res = await apiFetch('/api/razorpay-key');
+        if (!res.ok) {
+          console.warn('[Checkout] /api/razorpay-key returned', res.status);
+          return;
+        }
+        const data = await res.json();
+        if (mounted && data?.key) setRazorpayConfigured(true);
+      } catch (err) {
+        console.warn('[Checkout] /api/razorpay-key fetch failed', err);
+      }
+    };
+    checkKey();
+    return () => { mounted = false; };
+  }, []);
   
   const [formData, setFormData] = useState({
     name: '', email: '', phone: '',
@@ -42,7 +64,7 @@ export default function CheckoutPage() {
     setPincodeChecking(true);
     setPincodeMessage('Checking serviceability...');
     try {
-      const res = await fetch('/api/shipping/serviceability', {
+      const res = await apiFetch('/api/shipping/serviceability', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pincode }),
@@ -97,7 +119,7 @@ export default function CheckoutPage() {
         paymentMethod
       };
 
-      const res = await fetch('/api/orders', {
+      const res = await apiFetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -114,15 +136,20 @@ export default function CheckoutPage() {
       const resLoaded = await loadRazorpay();
       if (!resLoaded) throw new Error('Razorpay SDK failed to load. Are you online?');
 
+      // Fetch public key from backend for robust production behavior
+      const keyRes = await apiFetch('/api/razorpay-key');
+      const keyJson = await keyRes.json();
+      const publicKey = keyJson?.key || import.meta.env.VITE_RAZORPAY_KEY_ID || 'dummy_key';
+
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'dummy_key',
+        key: publicKey,
         amount: data.amount,
         currency: data.currency,
         name: "L3 MODZ",
         description: "Premium Motorcycle Accessories",
         order_id: data.razorpayOrderId,
         handler: async function (response: any) {
-          const verifyRes = await fetch('/api/orders/verify', {
+          const verifyRes = await apiFetch('/api/orders/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

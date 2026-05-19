@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
 import { CartProvider } from '@/hooks/useCart';
+import { apiFetch } from '@/lib/api';
 
 import Home from "./pages/Home";
 import Cart from "./pages/Cart";
@@ -33,7 +34,7 @@ function ProtectedAdminRoute({ children }: { children: ReactNode }) {
       const timeoutId = window.setTimeout(() => controller.abort(), 8000);
 
       try {
-        const res = await fetch('/api/admin/session', {
+        const res = await apiFetch('/api/admin/session', {
           credentials: 'include',
           signal: controller.signal,
           cache: 'no-store',
@@ -78,7 +79,7 @@ function ProtectedUserRoute({ children }: { children: ReactNode }) {
       const timeoutId = window.setTimeout(() => controller.abort(), 8000);
 
       try {
-        const res = await fetch('/api/auth/session', {
+        const res = await apiFetch('/api/auth/session', {
           credentials: 'include',
           signal: controller.signal,
           cache: 'no-store',

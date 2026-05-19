@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Button from '@/components/Button';
+import { apiFetch } from '@/lib/api';
 import toast from 'react-hot-toast';
 
 export default function RegisterPage() {
@@ -13,7 +14,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/register', {
+      const res = await apiFetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
