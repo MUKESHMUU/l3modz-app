@@ -16,6 +16,8 @@ export async function POST(req: Request) {
       weightKg: Number(body?.weightKg || process.env.SHIPROCKET_DEFAULT_WEIGHT_KG || 0.5),
     });
 
+    console.info('[API] /api/shipping/serviceability checked', { pincode, serviceable: result.serviceable, message: result.message });
+
     return NextResponse.json(result);
   } catch (error: any) {
     return NextResponse.json({ message: error.message || 'Failed to check pincode serviceability' }, { status: 500 });

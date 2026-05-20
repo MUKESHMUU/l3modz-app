@@ -256,7 +256,7 @@ export default function CheckoutPage() {
               <div>
                 <span className="font-medium block">Pay Online (Razorpay)</span>
                 <span className="text-xs text-gray-500">Credit Card, UPI, Netbanking</span>
-                {!razorpayConfigured && <span className="text-xs text-amber-600 block mt-1"></span>}
+                {!razorpayConfigured && <span className="text-xs text-amber-600 block mt-1">Enable this after adding Razorpay keys.</span>}
               </div>
             </label>
             <p className="text-xs text-gray-500">Cash on Delivery is disabled. Orders are confirmed only after successful online payment.</p>

@@ -152,24 +152,37 @@ function getOrderPackage(order: IOrder) {
 }
 
 export async function checkPincodeServiceability(params: ServiceabilityParams) {
-  const pickupPincode = getEnv('SHIPROCKET_PICKUP_PINCODE');
-  const query = new URLSearchParams({
-    pickup_postcode: pickupPincode,
-    delivery_postcode: params.deliveryPincode,
-    cod: params.cod ? '1' : '0',
-    weight: String(params.weightKg || 0.5),
-  });
+  try {
+    const pickupPincode = getEnv('SHIPROCKET_PICKUP_PINCODE');
+    const query = new URLSearchParams({
+      pickup_postcode: pickupPincode,
+      delivery_postcode: params.deliveryPincode,
+      cod: params.cod ? '1' : '0',
+      weight: String(params.weightKg || 0.5),
+    });
 
-  const data = await shiprocketRequest<any>(`/courier/serviceability/?${query.toString()}`, { method: 'GET' });
-  const availableCouriers = Array.isArray(data?.data?.available_courier_companies)
-    ? data.data.available_courier_companies
-    : [];
+    const data = await shiprocketRequest<any>(`/courier/serviceability/?${query.toString()}`, { method: 'GET' });
+    const availableCouriers = Array.isArray(data?.data?.available_courier_companies)
+      ? data.data.available_courier_companies
+      : [];
 
-  return {
-    serviceable: availableCouriers.length > 0,
-    couriers: availableCouriers,
-    message: availableCouriers.length > 0 ? 'Service available' : 'Delivery unavailable for this pincode',
-  };
+    return {
+      serviceable: availableCouriers.length > 0,
+      couriers: availableCouriers,
+      message: availableCouriers.length > 0 ? 'Service available' : 'Delivery unavailable for this pincode',
+    };
+  } catch (error: any) {
+    console.error('[Shiprocket] checkPincodeServiceability failed:', error?.message || error);
+    // Return a safe response rather than throwing so callers can show a user-friendly message
+    return {
+      serviceable: false,
+      couriers: [],
+      message:
+        error?.message && typeof error?.message === 'string'
+          ? `Service check failed: ${error.message}`
+          : 'Unable to verify delivery serviceability at this time',
+    };
+  }
 }
 
 export async function createShiprocketOrder(order: IOrder): Promise<CreateOrderResult> {
@@ -321,4 +334,53 @@ export async function createReturnShipment(order: IOrder): Promise<ReturnResult>
     returnTrackingUrl: data?.tracking_url,
     returnStatus: data?.status || 'return_requested',
   };
+}
+
+export async function getShiprocketDiagnostics() {
+  const envs = {
+    SHIPROCKET_EMAIL: !!process.env.SHIPROCKET_EMAIL,
+    SHIPROCKET_PASSWORD: !!process.env.SHIPROCKET_PASSWORD,
+    SHIPROCKET_PICKUP_PINCODE: !!process.env.SHIPROCKET_PICKUP_PINCODE,
+    SHIPROCKET_PICKUP_LOCATION: !!process.env.SHIPROCKET_PICKUP_LOCATION,
+  };
+
+  let authOk = false;
+  let authError: string | null = null;
+  let tokenExpiry: string | null = null;
+
+  try {
+    // Try to authenticate (will reuse cached token when valid)
+    await authenticateShiprocket(false);
+    authOk = !!cachedToken;
+    tokenExpiry = cachedTokenExpiry ? new Date(cachedTokenExpiry).toISOString() : null;
+  } catch (err: any) {
+    authError = err?.message || String(err);
+  }
+
+  // Attempt a lightweight connectivity/ping using serviceability (safe read-only call)
+  let pingOk = false;
+  let pingMessage: string | null = null;
+  try {
+    const pickup = process.env.SHIPROCKET_PICKUP_PINCODE;
+    if (!pickup) {
+      pingOk = false;
+      pingMessage = 'SHIPROCKET_PICKUP_PINCODE not configured';
+    } else {
+      const q = new URLSearchParams({
+        pickup_postcode: pickup,
+        delivery_postcode: pickup,
+        cod: '0',
+        weight: '0.5',
+      });
+      // Use a single attempt for ping to keep diagnostics quick
+      await shiprocketRequest<any>(`/courier/serviceability/?${q.toString()}`, { method: 'GET' }, 1);
+      pingOk = true;
+      pingMessage = 'Serviceability ping succeeded';
+    }
+  } catch (err: any) {
+    pingOk = false;
+    pingMessage = err?.message || String(err);
+  }
+
+  return { envs, authOk, authError, tokenExpiry, pingOk, pingMessage };
 }
