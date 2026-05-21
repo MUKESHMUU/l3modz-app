@@ -135,6 +135,20 @@ function getRuntimeShiprocketConfig() {
   };
 }
 
+function describeShiprocketAuthFailure(errorMessage: string) {
+  const message = String(errorMessage || '').toLowerCase();
+
+  if (message.includes('too many') || message.includes('blocked') || message.includes('temporarily') || message.includes('rate limit')) {
+    return 'Shiprocket authentication is temporarily blocked. Please try again later or check the Shiprocket account status.';
+  }
+
+  if (message.includes('unauthorized') || message.includes('forbidden') || message.includes('credentials') || message.includes('password') || message.includes('email')) {
+    return 'Shiprocket authentication failed. Verify SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD in Render.';
+  }
+
+  return 'Shiprocket authentication failed. Check Shiprocket credentials and account status in Render.';
+}
+
 function validateRuntimeConfig(options: { requirePickupLocation?: boolean; requirePickupPincode?: boolean } = {}) {
   const config = getRuntimeShiprocketConfig();
 
@@ -236,7 +250,7 @@ async function authenticateShiprocket(force = false): Promise<string> {
         lastAuthResponseBody = errorText;
         const safeMessage =
           res.status === 400 || res.status === 401 || res.status === 403
-            ? 'Shiprocket authentication failed. Verify SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD in Render.'
+            ? describeShiprocketAuthFailure(errorText)
             : res.status >= 500
               ? 'Shiprocket authentication service is unavailable.'
               : `Shiprocket authentication failed with status ${res.status}`;
@@ -412,11 +426,13 @@ export async function checkPincodeServiceability(params: ServiceabilityParams) {
   } catch (error: any) {
     console.error('[Shiprocket] checkPincodeServiceability failed:', error?.message || error);
     // Return a safe response rather than throwing so callers can show a user-friendly message
+    const errorMessage = String(error?.message || error || '');
+    const authFailureMessage = describeShiprocketAuthFailure(errorMessage);
     return {
       serviceable: false,
       couriers: [],
-      message: error?.message && /pickup|email|password|pincode/i.test(error.message)
-        ? 'Delivery service configuration is invalid. Please contact support.'
+      message: /too many|blocked|temporarily|rate limit|auth|unauthori|forbidden|pickup|email|password|pincode/i.test(errorMessage)
+        ? authFailureMessage
         : 'Unable to verify delivery serviceability at this time',
     };
   }
