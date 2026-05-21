@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PackageSearch, ShoppingBag, Users, IndianRupee, LogOut, RefreshCw, Save, Trash2, Plus, Pencil, XCircle, Eye, Truck, ClipboardList, Package } from 'lucide-react';
+import { PackageSearch, ShoppingBag, Users, IndianRupee, LogOut, RefreshCw, Save, Trash2, Plus, Pencil, XCircle, Eye, Truck, ClipboardList, Package, ShieldCheck, ShieldAlert, Activity } from 'lucide-react';
 import Button from '@/components/Button';
 import { apiFetch } from '@/lib/api';
 import type { ReactNode } from 'react';
@@ -102,6 +102,42 @@ interface HomeCategory {
   slug: string;
   image?: string;
   description?: string;
+}
+
+interface ShiprocketEnvInspection {
+  rawPresent: boolean;
+  normalizedPresent: boolean;
+  rawLength: number;
+  normalizedLength: number;
+  trimmed: boolean;
+  hasControlWhitespace: boolean;
+}
+
+interface ShiprocketDiagnostics {
+  debugEnabled?: boolean;
+  envs?: {
+    SHIPROCKET_EMAIL?: ShiprocketEnvInspection;
+    SHIPROCKET_PASSWORD?: ShiprocketEnvInspection;
+    SHIPROCKET_PICKUP_PINCODE?: ShiprocketEnvInspection;
+    SHIPROCKET_PICKUP_LOCATION?: ShiprocketEnvInspection;
+  };
+  auth?: {
+    ok?: boolean;
+    error?: string | null;
+    tokenExpiry?: string | null;
+    lastAttemptAt?: string | null;
+    lastSuccessAt?: string | null;
+    lastStatus?: number | null;
+    lastError?: string | null;
+    lastEndpoint?: string | null;
+    lastResponseBody?: string | null;
+  };
+  serviceability?: {
+    ok?: boolean;
+    error?: string | null;
+    pingOk?: boolean;
+    pingMessage?: string | null;
+  };
 }
 
 const DEFAULT_HOME_CATEGORY_CARDS: HomeCategory[] = [
@@ -207,6 +243,8 @@ export default function AdminPanelPage() {
   const [categoryCards, setCategoryCards] = useState<HomeCategory[]>([]);
   const [categorySavingId, setCategorySavingId] = useState('');
   const [categoryUploadingIndex, setCategoryUploadingIndex] = useState<number | null>(null);
+  const [shiprocketDiagnostics, setShiprocketDiagnostics] = useState<ShiprocketDiagnostics | null>(null);
+  const [shiprocketDiagnosticsLoading, setShiprocketDiagnosticsLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -215,12 +253,13 @@ export default function AdminPanelPage() {
     setMessage('');
 
     try {
-      const [sessionRes, productsRes, ordersRes, usersRes, categoriesRes] = await Promise.all([
+      const [sessionRes, productsRes, ordersRes, usersRes, categoriesRes, diagnosticsRes] = await Promise.all([
         apiFetch('/api/admin/session', { credentials: 'include' }),
         apiFetch('/api/products', { credentials: 'include' }),
         apiFetch('/api/admin/orders', { credentials: 'include' }),
         apiFetch('/api/admin/users', { credentials: 'include' }),
         apiFetch('/api/categories', { credentials: 'include' }),
+        apiFetch('/api/admin/diagnostics', { credentials: 'include' }),
       ]);
 
       if (!sessionRes.ok) {
@@ -241,6 +280,13 @@ export default function AdminPanelPage() {
         usersRes.json(),
         categoriesRes.ok ? categoriesRes.json() : Promise.resolve([]),
       ]);
+
+      if (diagnosticsRes.ok) {
+        const diagnosticsData = await diagnosticsRes.json();
+        setShiprocketDiagnostics(diagnosticsData?.shiprocket || null);
+      } else {
+        setShiprocketDiagnostics(null);
+      }
 
       setProducts(Array.isArray(productsData) ? productsData : []);
       setOrders(Array.isArray(ordersData) ? ordersData : []);
@@ -303,6 +349,22 @@ export default function AdminPanelPage() {
   const logout = async () => {
     await apiFetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     navigate('/admin/login', { replace: true });
+  };
+
+  const refreshShiprocketDiagnostics = async () => {
+    setShiprocketDiagnosticsLoading(true);
+    try {
+      const res = await apiFetch('/api/admin/diagnostics', { credentials: 'include' });
+      if (!res.ok) {
+        throw new Error('Failed to load diagnostics');
+      }
+      const data = await res.json();
+      setShiprocketDiagnostics(data?.shiprocket || null);
+    } catch (err: any) {
+      setMessage(err.message || 'Failed to refresh diagnostics');
+    } finally {
+      setShiprocketDiagnosticsLoading(false);
+    }
   };
 
   const createProduct = async () => {
@@ -959,6 +1021,86 @@ export default function AdminPanelPage() {
               <div className="rounded-2xl border border-brand-border bg-white p-6">
                 <h2 className="text-lg font-semibold">Management Summary</h2>
                 <p className="mt-2 text-sm text-gray-600">Use Products to edit stock/pricing, Orders to update fulfillment status, and Users to monitor registered accounts.</p>
+              </div>
+
+              <div className="rounded-2xl border border-brand-border bg-white p-6">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold">Shiprocket Diagnostics</h2>
+                    <p className="mt-1 text-sm text-gray-600">Runtime auth and serviceability health from the backend. No secrets are shown.</p>
+                  </div>
+                  <Button variant="outline" onClick={refreshShiprocketDiagnostics} disabled={shiprocketDiagnosticsLoading}>
+                    <RefreshCw size={16} className={shiprocketDiagnosticsLoading ? 'mr-2 animate-spin' : 'mr-2'} /> Refresh
+                  </Button>
+                </div>
+
+                {shiprocketDiagnostics ? (
+                  <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                    <div className="rounded-xl border border-brand-border bg-brand-bg/40 p-4">
+                      <div className="flex items-center gap-2">
+                        {shiprocketDiagnostics.auth?.ok ? (
+                          <ShieldCheck size={18} className="text-green-600" />
+                        ) : (
+                          <ShieldAlert size={18} className="text-red-600" />
+                        )}
+                        <h3 className="font-semibold text-brand-text">Authentication</h3>
+                      </div>
+                      <div className="mt-3 space-y-2 text-sm text-gray-700">
+                        <div className="flex justify-between gap-4"><span>Status</span><span className="font-semibold">{shiprocketDiagnostics.auth?.ok ? 'OK' : 'Failed'}</span></div>
+                        <div className="flex justify-between gap-4"><span>Last attempt</span><span className="font-semibold">{shiprocketDiagnostics.auth?.lastAttemptAt ? new Date(shiprocketDiagnostics.auth.lastAttemptAt).toLocaleString() : 'N/A'}</span></div>
+                        <div className="flex justify-between gap-4"><span>Last success</span><span className="font-semibold">{shiprocketDiagnostics.auth?.lastSuccessAt ? new Date(shiprocketDiagnostics.auth.lastSuccessAt).toLocaleString() : 'N/A'}</span></div>
+                        <div className="flex justify-between gap-4"><span>HTTP status</span><span className="font-semibold">{shiprocketDiagnostics.auth?.lastStatus ?? 'N/A'}</span></div>
+                        <div className="flex justify-between gap-4"><span>Token expiry</span><span className="font-semibold">{shiprocketDiagnostics.auth?.tokenExpiry ? new Date(shiprocketDiagnostics.auth.tokenExpiry).toLocaleString() : 'N/A'}</span></div>
+                        <p className="rounded-lg bg-white/80 p-3 text-xs text-gray-600">{shiprocketDiagnostics.auth?.error || shiprocketDiagnostics.auth?.lastError || 'No auth error reported.'}</p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-brand-border bg-brand-bg/40 p-4">
+                      <div className="flex items-center gap-2">
+                        <Activity size={18} className={shiprocketDiagnostics.serviceability?.pingOk ? 'text-green-600' : 'text-amber-600'} />
+                        <h3 className="font-semibold text-brand-text">Connectivity</h3>
+                      </div>
+                      <div className="mt-3 space-y-2 text-sm text-gray-700">
+                        <div className="flex justify-between gap-4"><span>Serviceability probe</span><span className="font-semibold">{shiprocketDiagnostics.serviceability?.ok ? 'OK' : 'Failed'}</span></div>
+                        <div className="flex justify-between gap-4"><span>Ping</span><span className="font-semibold">{shiprocketDiagnostics.serviceability?.pingOk ? 'OK' : 'Failed'}</span></div>
+                        <p className="rounded-lg bg-white/80 p-3 text-xs text-gray-600">{shiprocketDiagnostics.serviceability?.error || shiprocketDiagnostics.serviceability?.pingMessage || 'No connectivity issues reported.'}</p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-brand-border bg-brand-bg/40 p-4 lg:col-span-2">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck size={18} className="text-brand-primary" />
+                        <h3 className="font-semibold text-brand-text">Environment Inspection</h3>
+                      </div>
+                      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        {(['SHIPROCKET_EMAIL', 'SHIPROCKET_PASSWORD', 'SHIPROCKET_PICKUP_PINCODE', 'SHIPROCKET_PICKUP_LOCATION'] as const).map((key) => {
+                          const item = shiprocketDiagnostics.envs?.[key];
+                          return (
+                            <div key={key} className="rounded-lg border border-white bg-white p-3 text-sm">
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="font-semibold text-brand-text">{key}</span>
+                                <span className={`text-xs font-semibold ${item?.normalizedPresent ? 'text-green-600' : 'text-red-600'}`}>
+                                  {item?.normalizedPresent ? 'Present' : 'Missing'}
+                                </span>
+                              </div>
+                              <div className="mt-2 space-y-1 text-xs text-gray-600">
+                                <div>Raw length: {item?.rawLength ?? 'N/A'}</div>
+                                <div>Normalized length: {item?.normalizedLength ?? 'N/A'}</div>
+                                <div>Trimmed: {item?.trimmed ? 'Yes' : 'No'}</div>
+                                <div>Whitespace/newline: {item?.hasControlWhitespace ? 'Yes' : 'No'}</div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <p className="mt-3 text-xs text-gray-500">Debug mode: {shiprocketDiagnostics.debugEnabled ? 'Enabled' : 'Disabled'}.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-xl border border-dashed border-brand-border bg-brand-bg/30 p-4 text-sm text-gray-600">
+                    Diagnostics are not loaded yet. Click Refresh to fetch the current Shiprocket auth and connectivity status.
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-wrap gap-2">
