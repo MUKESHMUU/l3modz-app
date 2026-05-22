@@ -27,7 +27,15 @@ export async function POST(req: Request) {
     const token = signToken({ id: user._id, role: user.role });
 
     const cookieStore = await cookies();
-    cookieStore.set('token', token, getAuthCookieOptions());
+    const cookieOptions = getAuthCookieOptions();
+    cookieStore.set('token', token, cookieOptions);
+    console.info('[Auth] user login cookie set', {
+      userId: String(user._id),
+      role: user.role,
+      secure: cookieOptions.secure,
+      sameSite: cookieOptions.sameSite,
+      hasDomain: Boolean((cookieOptions as { domain?: string }).domain),
+    });
 
     return NextResponse.json({
       message: 'Logged in successfully',

@@ -4,6 +4,7 @@ import { getUserFromToken } from '@/lib/checkAuth';
 export async function GET() {
   try {
     const user = await getUserFromToken();
+    console.info('[Auth] session check', { hasUser: Boolean(user), role: user?.role || null });
     if (!user) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }

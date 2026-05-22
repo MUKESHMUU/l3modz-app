@@ -6,9 +6,14 @@ export async function POST() {
   try {
     const cookieStore = await cookies();
 
+    const cookieOptions = getAuthCookieOptions();
     cookieStore.set('token', '', {
       ...getAuthCookieOptions(),
       maxAge: 0,
+    });
+    console.info('[Auth] logout cookie cleared', {
+      secure: cookieOptions.secure,
+      sameSite: cookieOptions.sameSite,
     });
 
     return NextResponse.json({ message: 'Logged out successfully' });

@@ -23,8 +23,7 @@ export async function POST() {
 
     const cookieStore = await cookies();
     cookieStore.set('token', token, {
-      ...getAuthCookieOptions(),
-      secure: false,
+      ...getAuthCookieOptions({ localDev: true }),
     });
 
     return NextResponse.json({

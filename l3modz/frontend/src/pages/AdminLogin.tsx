@@ -44,7 +44,8 @@ export default function AdminLoginPage() {
     };
   }, [navigate]);
 
-  const handleLogin = async () => {
+  const handleLogin = async (e?: React.FormEvent<HTMLFormElement>) => {
+    e?.preventDefault();
     setError('');
     setSuccess('');
     if (!email.trim() || !password.trim()) {
@@ -61,7 +62,16 @@ export default function AdminLoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      const responseText = await res.text();
+      let data: { message?: string } = {};
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText) as { message?: string };
+        } catch {
+          data = { message: responseText };
+        }
+      }
+
       if (!res.ok) {
         throw new Error(data.message || 'Login failed');
       }
@@ -84,7 +94,7 @@ export default function AdminLoginPage() {
         <h1 className="text-2xl font-bold tracking-tight text-brand-text">Admin Login</h1>
         <p className="mt-2 text-sm text-gray-500">Enter your admin credentials to access the admin panel.</p>
 
-        <div className="mt-6 space-y-4">
+        <form className="mt-6 space-y-4" onSubmit={handleLogin}>
           <div>
             <label htmlFor="admin-email" className="mb-1 block text-sm font-medium text-gray-700">Email</label>
             <input
@@ -109,13 +119,13 @@ export default function AdminLoginPage() {
             />
           </div>
 
-          <Button type="button" fullWidth size="lg" disabled={loading} onClick={handleLogin}>
+          <Button type="submit" fullWidth size="lg" disabled={loading}>
             {loading ? 'Please wait...' : 'Login'}
           </Button>
 
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
           {success && <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{success}</p>}
-        </div>
+        </form>
 
         <div className="mt-6 text-center">
           <Link to="/" className="text-sm text-brand-primary hover:underline">

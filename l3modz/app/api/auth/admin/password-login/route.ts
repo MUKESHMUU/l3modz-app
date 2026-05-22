@@ -55,7 +55,15 @@ export async function POST(req: Request) {
     const token = signToken({ id: adminUser._id, role: adminUser.role });
 
     const cookieStore = await cookies();
-    cookieStore.set('token', token, getAuthCookieOptions());
+    const cookieOptions = getAuthCookieOptions();
+    cookieStore.set('token', token, cookieOptions);
+    console.info('[Auth] admin login cookie set', {
+      adminId: String(adminUser._id),
+      email: adminUser.email,
+      secure: cookieOptions.secure,
+      sameSite: cookieOptions.sameSite,
+      hasDomain: Boolean((cookieOptions as { domain?: string }).domain),
+    });
 
     return NextResponse.json({
       message: 'Admin login successful',

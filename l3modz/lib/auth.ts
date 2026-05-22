@@ -55,15 +55,22 @@ export function getAuthCookieDomain() {
   }
 }
 
-export function getAuthCookieOptions() {
-  const domain = getAuthCookieDomain();
+export function getAuthCookieOptions(options: { localDev?: boolean } = {}) {
+  if (options.localDev && process.env.NODE_ENV !== 'production') {
+    return {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax' as const,
+      maxAge: 7 * 24 * 60 * 60,
+      path: '/',
+    };
+  }
 
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict' as const,
+    sameSite: 'none' as const,
     maxAge: 7 * 24 * 60 * 60,
     path: '/',
-    ...(domain ? { domain } : {}),
   };
 }
