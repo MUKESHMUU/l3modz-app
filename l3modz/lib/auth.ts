@@ -27,3 +27,43 @@ export const hashPassword = async (password: string) => {
 export const comparePassword = async (password: string, hash: string) => {
   return bcrypt.compare(password, hash);
 };
+
+function normalizeCookieDomain(hostname: string) {
+  const trimmed = hostname.trim().toLowerCase();
+  if (!trimmed || trimmed === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(trimmed)) {
+    return '';
+  }
+
+  if (trimmed.startsWith('www.')) {
+    return `.${trimmed.slice(4)}`;
+  }
+
+  return `.${trimmed}`;
+}
+
+export function getAuthCookieDomain() {
+  const source = process.env.NEXTAUTH_URL || process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || '';
+
+  if (!source) {
+    return '';
+  }
+
+  try {
+    return normalizeCookieDomain(new URL(source).hostname);
+  } catch {
+    return normalizeCookieDomain(source.replace(/^https?:\/\//i, '').split('/')[0] || '');
+  }
+}
+
+export function getAuthCookieOptions() {
+  const domain = getAuthCookieDomain();
+
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict' as const,
+    maxAge: 7 * 24 * 60 * 60,
+    path: '/',
+    ...(domain ? { domain } : {}),
+  };
+}

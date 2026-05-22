@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
-import { signToken } from '@/lib/auth';
+import { getAuthCookieOptions, signToken } from '@/lib/auth';
 
 const ADMIN_PHONE = process.env.ADMIN_LOGIN_PHONE || '7708969064';
 
@@ -23,11 +23,8 @@ export async function POST() {
 
     const cookieStore = await cookies();
     cookieStore.set('token', token, {
-      httpOnly: true,
+      ...getAuthCookieOptions(),
       secure: false,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60,
-      path: '/',
     });
 
     return NextResponse.json({

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
-import { comparePassword, signToken } from '@/lib/auth';
+import { comparePassword, getAuthCookieOptions, signToken } from '@/lib/auth';
 import { cookies } from 'next/headers';
 
 export async function POST(req: Request) {
@@ -27,13 +27,7 @@ export async function POST(req: Request) {
     const token = signToken({ id: user._id, role: user.role });
 
     const cookieStore = await cookies();
-    cookieStore.set('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60,
-      path: '/',
-    });
+    cookieStore.set('token', token, getAuthCookieOptions());
 
     return NextResponse.json({
       message: 'Logged in successfully',

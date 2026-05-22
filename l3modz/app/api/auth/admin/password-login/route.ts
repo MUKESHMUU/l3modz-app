@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
-import { comparePassword, hashPassword, signToken } from '@/lib/auth';
+import { comparePassword, getAuthCookieOptions, hashPassword, signToken } from '@/lib/auth';
 import { cookies } from 'next/headers';
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@l3modz.com';
@@ -55,13 +55,7 @@ export async function POST(req: Request) {
     const token = signToken({ id: adminUser._id, role: adminUser.role });
 
     const cookieStore = await cookies();
-    cookieStore.set('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60,
-      path: '/',
-    });
+    cookieStore.set('token', token, getAuthCookieOptions());
 
     return NextResponse.json({
       message: 'Admin login successful',
