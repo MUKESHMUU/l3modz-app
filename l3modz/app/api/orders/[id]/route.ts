@@ -37,28 +37,44 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     await dbConnect();
     const id = (await params).id;
+    const body = await req.json();
     const {
       status,
       deliveryPartner,
       courierPartner,
+      shippingPartner,
       partner,
       courierName,
       awbNumber,
       trackingUrl,
-    } = await req.json();
+    } = body;
+
+    console.info('[orders.put] body', {
+      id,
+      status,
+      deliveryPartner,
+      courierPartner,
+      shippingPartner,
+      partner,
+      courierName,
+      awbNumber,
+      trackingUrl,
+    });
 
     const requestedPartner =
       typeof deliveryPartner === 'string'
         ? deliveryPartner
         : typeof courierPartner === 'string'
           ? courierPartner
+          : typeof shippingPartner === 'string'
+            ? shippingPartner
           : typeof partner === 'string'
             ? partner
             : undefined;
 
     const normalizedPartner =
-      requestedPartner === 'India Post' || requestedPartner === 'Shiprocket' || requestedPartner === 'Other'
-        ? requestedPartner
+      requestedPartner === 'India Post' || requestedPartner === 'Shiprocket' || requestedPartner === 'Other' || requestedPartner === 'Custom Courier'
+        ? (requestedPartner === 'Custom Courier' ? 'Other' : requestedPartner)
         : undefined;
 
     const order = await Order.findById(id);
@@ -82,9 +98,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       order.tracking_url = trackingUrl.trim();
     }
 
-    order.status = status;
+    if (typeof status === 'string' && status.trim()) {
+      order.status = status;
+    }
 
-    if (status === 'Shipped') {
+    if (order.status === 'Shipped') {
       const activePartner = (order.deliveryPartner || 'Shiprocket') as 'Shiprocket' | 'India Post' | 'Other';
       order.deliveryPartner = activePartner;
 
@@ -118,12 +136,20 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       }
     }
 
-    if (status === 'Delivered') {
+    if (order.status === 'Delivered') {
       order.deliveredAt = new Date();
       order.delivery_status = 'delivered';
     }
 
     await order.save();
+    console.info('[orders.put] updatedOrder', {
+      id: String(order._id),
+      status: order.status,
+      deliveryPartner: order.deliveryPartner,
+      courier_name: order.courier_name,
+      AWB_number: order.AWB_number,
+      tracking_url: order.tracking_url,
+    });
     return NextResponse.json(order);
   } catch (error: any) {
     return NextResponse.json({ message: error.message }, { status: 500 });

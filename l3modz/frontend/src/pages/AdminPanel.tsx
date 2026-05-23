@@ -597,13 +597,57 @@ export default function AdminPanelPage() {
   const updateOrderPartner = async (
     orderId: string,
     deliveryPartner: 'Shiprocket' | 'India Post' | 'Other',
-    courierName?: string,
-    status?: string
+    courierName?: string
   ) => {
-    await updateOrderStatus(orderId, status || orders.find((o) => o._id === orderId)?.status || 'Pending', {
+    setSavingId(orderId);
+    setMessage('');
+
+    const previousOrder = orders.find((order) => order._id === orderId);
+    const optimisticUpdate = {
       deliveryPartner,
-      courierName: courierName || undefined,
-    });
+      ...(deliveryPartner === 'Other'
+        ? { courier_name: (courierName || previousOrder?.courier_name || '').trim() }
+        : {}),
+    };
+
+    if (previousOrder) {
+      setOrders((prev) => prev.map((order) => (order._id === orderId ? { ...order, ...optimisticUpdate } : order)));
+      if (selectedOrder?._id === orderId) {
+        setSelectedOrder({ ...previousOrder, ...optimisticUpdate });
+      }
+    }
+
+    try {
+      const res = await apiFetch(`/api/orders/${orderId}`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deliveryPartner,
+          courierName: deliveryPartner === 'Other' ? (courierName || '').trim() : undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to update courier partner');
+
+      setOrders((prev) => prev.map((order) => (order._id === orderId ? data : order)));
+      if (selectedOrder?._id === orderId) {
+        setSelectedOrder(data);
+      }
+      setMessage('Courier partner updated.');
+    } catch (err: any) {
+      if (previousOrder) {
+        setOrders((prev) => prev.map((order) => (order._id === orderId ? previousOrder : order)));
+        if (selectedOrder?._id === orderId) {
+          setSelectedOrder(previousOrder);
+        }
+      }
+      console.error('Partner update failed:', err);
+      setMessage(err.message || 'Failed to update courier partner');
+    } finally {
+      setSavingId('');
+    }
   };
 
   const updateUserRole = async (userId: string, role: 'user' | 'admin') => {
@@ -1726,19 +1770,19 @@ export default function AdminPanelPage() {
                       </td>
                       <td className="px-4 py-3">
                         <select
-                          value={o.deliveryPartner || 'Shiprocket'}
+                          value={o.deliveryPartner || ''}
                           onChange={(e) => {
                             const nextPartner = e.target.value as 'Shiprocket' | 'India Post' | 'Other';
-                            updateOrderPartner(
+                            void updateOrderPartner(
                               o._id,
                               nextPartner,
-                              nextPartner === 'Other' ? o.courier_name : undefined,
-                              o.status
+                              nextPartner === 'Other' ? o.courier_name : undefined
                             );
                           }}
                           className="rounded-lg border border-brand-border px-3 py-2"
                           disabled={savingId === o._id}
                         >
+                          <option value="" disabled>Select partner</option>
                           {DELIVERY_PARTNERS.map((partner) => (
                             <option key={partner} value={partner}>{partner}</option>
                           ))}
@@ -2027,7 +2071,7 @@ export default function AdminPanelPage() {
                           setCustomCourierDraft('');
                         }
                         // Save the partner change immediately; courier name saves on "Mark As Shipped"
-                        void updateOrderPartner(selectedOrder._id, nextPartner, undefined, selectedOrder.status);
+                        void updateOrderPartner(selectedOrder._id, nextPartner, undefined);
                       }}
                       className="rounded-lg border border-brand-border px-3 py-2"
                       disabled={shippingActionLoading}
