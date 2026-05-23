@@ -575,10 +575,12 @@ export default function AdminPanelPage() {
   const updateOrderPartner = async (
     orderId: string,
     deliveryPartner: 'Shiprocket' | 'India Post' | 'Other',
+    courierName?: string,
     status?: string
   ) => {
     await updateOrderStatus(orderId, status || orders.find((o) => o._id === orderId)?.status || 'Pending', {
       deliveryPartner,
+      courierName: courierName || undefined,
     });
   };
 
@@ -1703,7 +1705,15 @@ export default function AdminPanelPage() {
                       <td className="px-4 py-3">
                         <select
                           value={o.deliveryPartner || 'Shiprocket'}
-                          onChange={(e) => updateOrderPartner(o._id, e.target.value as 'Shiprocket' | 'India Post' | 'Other')}
+                          onChange={(e) => {
+                            const nextPartner = e.target.value as 'Shiprocket' | 'India Post' | 'Other';
+                            updateOrderPartner(
+                              o._id,
+                              nextPartner,
+                              nextPartner === 'Other' ? o.courier_name : undefined,
+                              o.status
+                            );
+                          }}
                           className="rounded-lg border border-brand-border px-3 py-2"
                           disabled={savingId === o._id}
                         >
@@ -1988,8 +1998,14 @@ export default function AdminPanelPage() {
                       onChange={(e) => {
                         const nextPartner = e.target.value as 'Shiprocket' | 'India Post' | 'Other';
                         setDeliveryPartnerDraft(nextPartner);
-                        setCustomCourierDraft(nextPartner === 'Other' ? (selectedOrder.courier_name || customCourierDraft) : '');
-                        void updateOrderPartner(selectedOrder._id, nextPartner, selectedOrder.status);
+                        // When switching to Other, pre-fill with existing courier name or keep the draft
+                        if (nextPartner === 'Other') {
+                          setCustomCourierDraft(customCourierDraft || selectedOrder.courier_name || '');
+                        } else {
+                          setCustomCourierDraft('');
+                        }
+                        // Save the partner change immediately; courier name saves on "Mark As Shipped"
+                        void updateOrderPartner(selectedOrder._id, nextPartner, undefined, selectedOrder.status);
                       }}
                       className="rounded-lg border border-brand-border px-3 py-2"
                       disabled={shippingActionLoading}
