@@ -40,14 +40,25 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const {
       status,
       deliveryPartner,
+      courierPartner,
+      partner,
       courierName,
       awbNumber,
       trackingUrl,
     } = await req.json();
 
-    const normalizedPartner =
-      deliveryPartner === 'India Post' || deliveryPartner === 'Shiprocket' || deliveryPartner === 'Other'
+    const requestedPartner =
+      typeof deliveryPartner === 'string'
         ? deliveryPartner
+        : typeof courierPartner === 'string'
+          ? courierPartner
+          : typeof partner === 'string'
+            ? partner
+            : undefined;
+
+    const normalizedPartner =
+      requestedPartner === 'India Post' || requestedPartner === 'Shiprocket' || requestedPartner === 'Other'
+        ? requestedPartner
         : undefined;
 
     const order = await Order.findById(id);

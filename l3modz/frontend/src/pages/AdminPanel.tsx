@@ -543,6 +543,22 @@ export default function AdminPanelPage() {
     setSavingId(orderId);
     setMessage('');
 
+    const previousOrder = orders.find((order) => order._id === orderId);
+    const optimisticUpdate = {
+      status,
+      ...(shippingDetails?.deliveryPartner ? { deliveryPartner: shippingDetails.deliveryPartner } : {}),
+      ...(typeof shippingDetails?.courierName === 'string' ? { courier_name: shippingDetails.courierName } : {}),
+      ...(typeof shippingDetails?.awbNumber === 'string' ? { AWB_number: shippingDetails.awbNumber } : {}),
+      ...(typeof shippingDetails?.trackingUrl === 'string' ? { tracking_url: shippingDetails.trackingUrl } : {}),
+    };
+
+    if (previousOrder) {
+      setOrders((prev) => prev.map((order) => (order._id === orderId ? { ...order, ...optimisticUpdate } : order)));
+      if (selectedOrder?._id === orderId) {
+        setSelectedOrder({ ...previousOrder, ...optimisticUpdate });
+      }
+    }
+
     try {
       const res = await apiFetch(`/api/orders/${orderId}`, {
         method: 'PUT',
@@ -566,6 +582,12 @@ export default function AdminPanelPage() {
       }
       setMessage('Order status updated.');
     } catch (err: any) {
+      if (previousOrder) {
+        setOrders((prev) => prev.map((order) => (order._id === orderId ? previousOrder : order)));
+        if (selectedOrder?._id === orderId) {
+          setSelectedOrder(previousOrder);
+        }
+      }
       setMessage(err.message || 'Failed to update order');
     } finally {
       setSavingId('');
