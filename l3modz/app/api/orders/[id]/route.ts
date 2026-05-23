@@ -4,6 +4,13 @@ import Order from '@/models/Order';
 import { checkAdmin, getUserFromToken } from '@/lib/checkAuth';
 import { refreshTracking, syncOrderToShiprocket } from '@/lib/orderFulfillment';
 
+const ORDER_STATUSES = ['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'] as const;
+type OrderStatus = (typeof ORDER_STATUSES)[number];
+
+function isOrderStatus(value: string): value is OrderStatus {
+  return (ORDER_STATUSES as readonly string[]).includes(value);
+}
+
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await dbConnect();
@@ -98,8 +105,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       order.tracking_url = trackingUrl.trim();
     }
 
-    if (typeof status === 'string' && status.trim()) {
-      order.status = status;
+    if (typeof status === 'string') {
+      const normalizedStatus = status.trim();
+      if (isOrderStatus(normalizedStatus)) {
+        order.status = normalizedStatus;
+      }
     }
 
     if (order.status === 'Shipped') {
