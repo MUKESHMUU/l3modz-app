@@ -1999,7 +1999,7 @@ export default function AdminPanelPage() {
                       <option value="Other">Other (Custom Courier)</option>
                     </select>
                     {deliveryPartnerDraft === 'Other' && (
-                          onChange={(e) => updateOrderPartner(o._id, e.target.value as 'Shiprocket' | 'India Post' | 'Other', o.status)}
+                      <input
                         value={customCourierDraft}
                         onChange={(e) => setCustomCourierDraft(e.target.value)}
                         placeholder="Enter Courier Partner (e.g., DTDC, BlueDart)"
