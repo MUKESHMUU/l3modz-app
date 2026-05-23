@@ -574,9 +574,10 @@ export default function AdminPanelPage() {
 
   const updateOrderPartner = async (
     orderId: string,
-    deliveryPartner: 'Shiprocket' | 'India Post' | 'Other'
+    deliveryPartner: 'Shiprocket' | 'India Post' | 'Other',
+    status?: string
   ) => {
-    await updateOrderStatus(orderId, orders.find((o) => o._id === orderId)?.status || 'Pending', {
+    await updateOrderStatus(orderId, status || orders.find((o) => o._id === orderId)?.status || 'Pending', {
       deliveryPartner,
     });
   };
@@ -866,6 +867,18 @@ export default function AdminPanelPage() {
     setAwbDraft('');
     setTrackingUrlDraft('');
   };
+
+  useEffect(() => {
+    if (!selectedOrder) return;
+    const freshOrder = orders.find((order) => order._id === selectedOrder._id);
+    if (freshOrder && freshOrder !== selectedOrder) {
+      setSelectedOrder(freshOrder);
+      setDeliveryPartnerDraft(freshOrder.deliveryPartner || 'Shiprocket');
+      setCustomCourierDraft(freshOrder.deliveryPartner === 'Other' ? (freshOrder.courier_name || '') : '');
+      setAwbDraft(freshOrder.AWB_number || '');
+      setTrackingUrlDraft(freshOrder.tracking_url || '');
+    }
+  }, [orders, selectedOrder]);
 
   const indiaPostMissingAwb = (deliveryPartnerDraft === 'India Post' || deliveryPartnerDraft === 'Other') && !awbDraft.trim();
   const customCourierMissing = deliveryPartnerDraft === 'Other' && !customCourierDraft.trim();
@@ -1912,8 +1925,8 @@ export default function AdminPanelPage() {
                       <p><span className="font-semibold">Created:</span> {new Date(selectedOrder.createdAt).toLocaleString()}</p>
                       <p><span className="font-semibold">Paid At:</span> {selectedOrder.paidAt ? new Date(selectedOrder.paidAt).toLocaleString() : '-'}</p>
                       <p><span className="font-semibold">Delivery Status:</span> {selectedOrder.delivery_status || '-'}</p>
-                      <p><span className="font-semibold">Delivery Partner:</span> {selectedOrder.deliveryPartner || '-'}</p>
-                      <p><span className="font-semibold">Courier:</span> {selectedOrder.courier_name || '-'}</p>
+                      <p><span className="font-semibold">Delivery Partner:</span> {deliveryPartnerDraft || selectedOrder.deliveryPartner || '-'}</p>
+                      <p><span className="font-semibold">Courier:</span> {(deliveryPartnerDraft === 'Other' ? customCourierDraft : selectedOrder.courier_name) || selectedOrder.courier_name || '-'}</p>
                       <p><span className="font-semibold">AWB:</span> {selectedOrder.AWB_number || '-'}</p>
                       <p><span className="font-semibold">Estimated Delivery:</span> {selectedOrder.estimated_delivery ? new Date(selectedOrder.estimated_delivery).toLocaleDateString() : '-'}</p>
                     </div>
@@ -1971,10 +1984,12 @@ export default function AdminPanelPage() {
 
                   <div className="flex flex-wrap gap-3">
                     <select
-                      value={deliveryPartnerDraft}
+                      value={deliveryPartnerDraft || 'Shiprocket'}
                       onChange={(e) => {
-                        setDeliveryPartnerDraft(e.target.value as 'Shiprocket' | 'India Post' | 'Other');
-                        setCustomCourierDraft('');
+                        const nextPartner = e.target.value as 'Shiprocket' | 'India Post' | 'Other';
+                        setDeliveryPartnerDraft(nextPartner);
+                        setCustomCourierDraft(nextPartner === 'Other' ? (selectedOrder.courier_name || customCourierDraft) : '');
+                        void updateOrderPartner(selectedOrder._id, nextPartner, selectedOrder.status);
                       }}
                       className="rounded-lg border border-brand-border px-3 py-2"
                       disabled={shippingActionLoading}
@@ -1984,7 +1999,7 @@ export default function AdminPanelPage() {
                       <option value="Other">Other (Custom Courier)</option>
                     </select>
                     {deliveryPartnerDraft === 'Other' && (
-                      <input
+                          onChange={(e) => updateOrderPartner(o._id, e.target.value as 'Shiprocket' | 'India Post' | 'Other', o.status)}
                         value={customCourierDraft}
                         onChange={(e) => setCustomCourierDraft(e.target.value)}
                         placeholder="Enter Courier Partner (e.g., DTDC, BlueDart)"
