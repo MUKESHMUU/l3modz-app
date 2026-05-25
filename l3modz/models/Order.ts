@@ -57,10 +57,24 @@ export interface IOrder extends Document {
   delivery_status?: string;
   estimated_delivery?: Date;
   shipping_label_url?: string;
+  shiprocketShipmentCreatedAt?: Date;
+  shiprocketPickupRequestedAt?: Date;
+  shiprocketShipmentUpdatedAt?: Date;
+  shippingNotificationSentAt?: Date;
   return_shipment_status?: string;
   return_shipment_id?: string;
   return_awb_number?: string;
   return_tracking_url?: string;
+  shiprocketTrackingHistory?: Array<{
+    at: Date;
+    status: string;
+    message?: string;
+    trackingUrl?: string;
+    awb?: string;
+    shipmentId?: string;
+    source?: string;
+  }>;
+  shiprocketWebhookEventIds?: string[];
   shiprocketLastSyncAt?: Date;
   shiprocketSyncAttempts?: number;
   shiprocketSyncError?: string;
@@ -125,10 +139,26 @@ const orderSchema = new Schema<IOrder>(
     delivery_status: { type: String, default: 'pending_sync' },
     estimated_delivery: { type: Date },
     shipping_label_url: { type: String },
+    shiprocketShipmentCreatedAt: { type: Date },
+    shiprocketPickupRequestedAt: { type: Date },
+    shiprocketShipmentUpdatedAt: { type: Date },
+    shippingNotificationSentAt: { type: Date },
     return_shipment_status: { type: String },
     return_shipment_id: { type: String },
     return_awb_number: { type: String },
     return_tracking_url: { type: String },
+    shiprocketTrackingHistory: [
+      {
+        at: { type: Date, required: true },
+        status: { type: String, required: true },
+        message: { type: String },
+        trackingUrl: { type: String },
+        awb: { type: String },
+        shipmentId: { type: String },
+        source: { type: String },
+      },
+    ],
+    shiprocketWebhookEventIds: [{ type: String }],
     shiprocketLastSyncAt: { type: Date },
     shiprocketSyncAttempts: { type: Number, default: 0 },
     shiprocketSyncError: { type: String },

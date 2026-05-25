@@ -59,10 +59,28 @@ interface Order {
   };
   courier_name?: string;
   deliveryPartner?: 'Shiprocket' | 'India Post' | 'Other';
+  shipment_id?: string;
+  shiprocket_order_id?: string;
   AWB_number?: string;
   tracking_url?: string;
   delivery_status?: string;
   estimated_delivery?: string;
+  shipping_label_url?: string;
+  shiprocketLastSyncAt?: string;
+  shiprocketSyncAttempts?: number;
+  shiprocketSyncError?: string;
+  shiprocketShipmentCreatedAt?: string;
+  shiprocketShipmentUpdatedAt?: string;
+  shippingNotificationSentAt?: string;
+  shiprocketTrackingHistory?: {
+    at: string;
+    status: string;
+    message?: string;
+    trackingUrl?: string;
+    awb?: string;
+    shipmentId?: string;
+    source?: string;
+  }[];
   return_shipment_status?: string;
   return_tracking_url?: string;
   paymentMethod?: 'Razorpay' | 'COD';
@@ -1019,6 +1037,24 @@ export default function AdminPanelPage() {
     }
   };
 
+  const retryShiprocketShipment = async (orderId: string) => {
+    setShippingActionLoading(true);
+    setMessage('');
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/retry-shipment`, { method: 'POST', credentials: 'include' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to retry shipment');
+
+      setOrders((prev) => prev.map((o) => (o._id === orderId ? data.order : o)));
+      setSelectedOrder(data.order);
+      setMessage(data.ok ? 'Shipment retried successfully.' : (data.message || 'Shipment retry attempted.'));
+    } catch (err: any) {
+      setMessage(err.message || 'Failed to retry shipment');
+    } finally {
+      setShippingActionLoading(false);
+    }
+  };
+
   const openUserDetails = (user: User) => {
     setSelectedUser(user);
     setMessage('');
@@ -1792,6 +1828,7 @@ export default function AdminPanelPage() {
                         <p className="font-semibold text-gray-700">{o.deliveryPartner || '-'}</p>
                         <p className="font-medium text-gray-700">{o.courier_name || '-'}</p>
                         <p className="font-mono text-gray-500">{o.AWB_number || '-'}</p>
+                        {o.shiprocketSyncError && <p className="mt-1 text-[11px] font-semibold text-red-600">Sync failed</p>}
                       </td>
                       <td className="px-4 py-3">{new Date(o.createdAt).toLocaleDateString()}</td>
                       <td className="px-4 py-3">
@@ -2001,11 +2038,25 @@ export default function AdminPanelPage() {
                       <p><span className="font-semibold">Created:</span> {new Date(selectedOrder.createdAt).toLocaleString()}</p>
                       <p><span className="font-semibold">Paid At:</span> {selectedOrder.paidAt ? new Date(selectedOrder.paidAt).toLocaleString() : '-'}</p>
                       <p><span className="font-semibold">Delivery Status:</span> {selectedOrder.delivery_status || '-'}</p>
+                      <p><span className="font-semibold">Shiprocket Sync:</span> {selectedOrder.shiprocketSyncAttempts ? `${selectedOrder.shiprocketSyncAttempts} attempt(s)` : '0 attempts'}</p>
+                      <p><span className="font-semibold">Sync Error:</span> {selectedOrder.shiprocketSyncError || '-'}</p>
                       <p><span className="font-semibold">Delivery Partner:</span> {deliveryPartnerDraft || selectedOrder.deliveryPartner || '-'}</p>
                       <p><span className="font-semibold">Courier:</span> {(deliveryPartnerDraft === 'Other' ? customCourierDraft : selectedOrder.courier_name) || selectedOrder.courier_name || '-'}</p>
                       <p><span className="font-semibold">AWB:</span> {selectedOrder.AWB_number || '-'}</p>
                       <p><span className="font-semibold">Estimated Delivery:</span> {selectedOrder.estimated_delivery ? new Date(selectedOrder.estimated_delivery).toLocaleDateString() : '-'}</p>
                     </div>
+                    {selectedOrder.shiprocketTrackingHistory?.length ? (
+                      <div className="mt-4 space-y-2 border-t border-brand-border pt-4 text-xs text-gray-600">
+                        <p className="font-semibold text-gray-700">Recent Shipment Events</p>
+                        {selectedOrder.shiprocketTrackingHistory.slice(-3).reverse().map((entry, index) => (
+                          <div key={`${entry.at}-${index}`} className="rounded-lg bg-gray-50 p-2">
+                            <p className="font-semibold text-gray-700">{entry.status}</p>
+                            <p>{new Date(entry.at).toLocaleString()}</p>
+                            {entry.message && <p>{entry.message}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="rounded-2xl border border-brand-border bg-white p-4">
@@ -2111,10 +2162,18 @@ export default function AdminPanelPage() {
                     <Button variant="outline" onClick={() => refreshOrderTracking(selectedOrder._id)} disabled={shippingActionLoading || deliveryPartnerDraft !== 'Shiprocket'}>
                       <RefreshCw size={14} className="mr-1" /> Refresh Tracking
                     </Button>
+                    <Button variant="outline" onClick={() => retryShiprocketShipment(selectedOrder._id)} disabled={shippingActionLoading || deliveryPartnerDraft !== 'Shiprocket'}>
+                      <RefreshCw size={14} className="mr-1" /> Retry Shipment
+                    </Button>
                     <Button variant="outline" onClick={() => createReturnPickupForOrder(selectedOrder._id)} disabled={shippingActionLoading || deliveryPartnerDraft !== 'Shiprocket'}>
                       <Truck size={14} className="mr-1" /> Create Return Pickup
                     </Button>
                   </div>
+                  {selectedOrder.shiprocketSyncError && (
+                    <p className="mt-2 text-sm text-red-600">
+                      Last Shiprocket error: {selectedOrder.shiprocketSyncError}
+                    </p>
+                  )}
                   {indiaPostMissingAwb && (
                     <p className="mt-2 text-sm text-amber-700">
                       India Post requires a tracking/AWB number before you can mark the order as shipped.

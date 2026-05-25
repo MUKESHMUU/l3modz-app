@@ -107,6 +107,44 @@ function validatePositiveNumber(value: unknown, fallbackLabel: string) {
   return numeric;
 }
 
+function getStringValue(value: unknown) {
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return '';
+}
+
+function getNestedValue(source: any, path: string) {
+  return path.split('.').reduce<any>((current, key) => {
+    if (current && typeof current === 'object' && key in current) {
+      return current[key];
+    }
+    return undefined;
+  }, source);
+}
+
+function pickStringValue(source: any, paths: string[]) {
+  for (const path of paths) {
+    const value = getStringValue(getNestedValue(source, path));
+    if (value) return value;
+  }
+  return '';
+}
+
+function parseShiprocketResponseBody(body: string) {
+  const trimmed = String(body || '').trim();
+  if (!trimmed) return {};
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return { raw: trimmed };
+  }
+}
+
+function isRetryableShiprocketStatus(status: number) {
+  return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
+}
+
 function getRuntimeShiprocketConfig() {
   const rawEmail = process.env.SHIPROCKET_EMAIL;
   const rawPassword = process.env.SHIPROCKET_PASSWORD;
@@ -184,7 +222,7 @@ function getEnv(name: string): string {
 }
 
 function getRetryDelayMs(attempt: number) {
-  return Math.min(1200, 250 * Math.pow(2, attempt));
+  return Math.min(5000, 300 * Math.pow(2, attempt));
 }
 
 async function sleep(ms: number) {
@@ -344,11 +382,16 @@ async function shiprocketRequest<T>(path: string, init: RequestInit = {}, attemp
           responseBody: body,
           attempt: attempt + 1,
         });
+        if (attempt < attempts - 1 && isRetryableShiprocketStatus(res.status)) {
+          await sleep(getRetryDelayMs(attempt));
+          continue;
+        }
         throw new Error(`Shiprocket ${path} failed (${res.status}): ${body || res.statusText}`);
       }
 
       debugLog('Shiprocket request succeeded', { path, attempt: attempt + 1 });
-      return (await res.json()) as T;
+      const responseText = await res.text();
+      return parseShiprocketResponseBody(responseText) as T;
     } catch (error) {
       lastError = error;
       console.error('[Shiprocket] Request exception', {
@@ -518,15 +561,18 @@ export async function createShiprocketOrder(order: IOrder): Promise<CreateOrderR
     body: JSON.stringify(payload),
   });
 
+  const shiprocketOrderId = pickStringValue(data, ['order_id', 'data.order_id', 'response.order_id', 'response.data.order_id']);
+  const shipmentId = pickStringValue(data, ['shipment_id', 'data.shipment_id', 'response.shipment_id', 'response.data.shipment_id']);
+
   debugLog('Shiprocket order created', {
     orderId: String(order._id),
-    shiprocketOrderId: data?.order_id ? String(data.order_id) : undefined,
-    shipmentId: data?.shipment_id ? String(data.shipment_id) : undefined,
+    shiprocketOrderId: shiprocketOrderId || undefined,
+    shipmentId: shipmentId || undefined,
   });
 
   return {
-    shiprocketOrderId: data?.order_id ? String(data.order_id) : undefined,
-    shipmentId: data?.shipment_id ? String(data.shipment_id) : undefined,
+    shiprocketOrderId: shiprocketOrderId || undefined,
+    shipmentId: shipmentId || undefined,
   };
 }
 
@@ -538,11 +584,15 @@ export async function assignBestCourier(shipmentId: string): Promise<AssignAwbRe
   });
 
   return {
-    awbCode: data?.response?.data?.awb_code || data?.awb_code,
+    awbCode: pickStringValue(data, ['response.data.awb_code', 'data.awb_code', 'awb_code', 'response.awb_code']),
     courierName:
-      data?.response?.data?.courier_name ||
-      data?.response?.data?.courier_company_name ||
-      data?.courier_name,
+      pickStringValue(data, [
+        'response.data.courier_name',
+        'response.data.courier_company_name',
+        'response.data.courier_company',
+        'data.courier_name',
+        'courier_name',
+      ]) || undefined,
   };
 }
 
@@ -553,11 +603,17 @@ export async function generateShippingLabel(shipmentId: string): Promise<LabelRe
     body: JSON.stringify({ shipment_id: [shipmentId] }),
   });
 
+  const labelUrl = pickStringValue(data, [
+    'label_url',
+    'response.label_url',
+    'response.data.label_url',
+    'data.label_url',
+    'pdf_url',
+    'response.pdf_url',
+  ]);
+
   return {
-    labelUrl:
-      data?.label_url ||
-      data?.response?.label_url ||
-      data?.response?.label_created,
+    labelUrl: labelUrl || undefined,
   };
 }
 
@@ -576,21 +632,21 @@ export async function trackShipmentByAwb(awb: string): Promise<TrackingResult> {
     method: 'GET',
   });
 
-  const trackingData = data?.tracking_data || data?.data || {};
+  const trackingData = data?.tracking_data || data?.data || data?.response?.tracking_data || data?.response?.data || {};
   const firstShipment = Array.isArray(trackingData?.shipment_track)
     ? trackingData.shipment_track[0]
     : trackingData?.shipment_track || {};
 
   return {
-    trackingUrl: trackingData?.track_url || trackingData?.tracking_url,
+    trackingUrl: pickStringValue(trackingData, ['track_url', 'tracking_url', 'response.track_url', 'response.tracking_url']) || undefined,
     deliveryStatus:
-      firstShipment?.current_status ||
-      firstShipment?.shipment_status ||
-      trackingData?.shipment_status,
+      pickStringValue(firstShipment, ['current_status', 'shipment_status', 'status']) ||
+      pickStringValue(trackingData, ['shipment_status', 'current_status', 'status']) ||
+      undefined,
     estimatedDelivery:
-      firstShipment?.edd ||
-      trackingData?.etd ||
-      trackingData?.estimated_delivery_date,
+      pickStringValue(firstShipment, ['edd', 'estimated_delivery_date']) ||
+      pickStringValue(trackingData, ['etd', 'estimated_delivery_date', 'edd']) ||
+      undefined,
   };
 }
 
@@ -614,14 +670,14 @@ export async function createReturnShipment(order: IOrder): Promise<ReturnResult>
     }),
   });
 
-  const returnShipmentId = data?.shipment_id ? String(data.shipment_id) : undefined;
-  const returnAwbCode = data?.awb_code || data?.return_awb_code;
+  const returnShipmentId = pickStringValue(data, ['shipment_id', 'data.shipment_id', 'response.shipment_id']) || undefined;
+  const returnAwbCode = pickStringValue(data, ['awb_code', 'return_awb_code', 'data.awb_code', 'response.awb_code']) || undefined;
 
   return {
     returnShipmentId,
     returnAwbCode,
-    returnTrackingUrl: data?.tracking_url,
-    returnStatus: data?.status || 'return_requested',
+    returnTrackingUrl: pickStringValue(data, ['tracking_url', 'track_url', 'data.tracking_url', 'response.tracking_url']) || undefined,
+    returnStatus: pickStringValue(data, ['status', 'return_status', 'data.status']) || 'return_requested',
   };
 }
 

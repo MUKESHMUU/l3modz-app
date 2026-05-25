@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import Order from '@/models/Order';
 import { checkAdmin, getUserFromToken } from '@/lib/checkAuth';
 import { refreshTracking, syncOrderToShiprocket } from '@/lib/orderFulfillment';
+import { sendOrderShipmentNotifications } from '@/lib/notifications';
 
 const ORDER_STATUSES = ['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'] as const;
 type OrderStatus = (typeof ORDER_STATUSES)[number];
@@ -152,6 +153,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     await order.save();
+
+    if (order.status === 'Shipped' && !order.shippingNotificationSentAt && (order.AWB_number || order.tracking_url || order.shipment_id)) {
+      await sendOrderShipmentNotifications(order as any);
+      order.shippingNotificationSentAt = new Date();
+      await order.save();
+    }
+
     console.info('[orders.put] updatedOrder', {
       id: String(order._id),
       status: order.status,

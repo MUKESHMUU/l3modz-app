@@ -146,3 +146,60 @@ export async function sendOrderBillNotifications(order: IOrder) {
     });
   }
 }
+
+export async function sendOrderShipmentNotifications(order: IOrder) {
+  const customerName = order.guestInfo?.name || 'Customer';
+  const customerEmail = order.guestInfo?.email || '';
+  const customerPhone = order.guestInfo?.phone || '';
+
+  const payload = {
+    type: 'ORDER_SHIPPED',
+    orderId: String(order._id),
+    invoiceNumber: order.invoiceNumber,
+    amount: order.totalPrice,
+    customerName,
+    customerEmail,
+    customerPhone,
+    status: order.status,
+    deliveryStatus: order.delivery_status,
+    deliveryPartner: order.deliveryPartner || 'Shiprocket',
+    courierName: order.courier_name || null,
+    awb: order.AWB_number || null,
+    trackingUrl: order.tracking_url || null,
+    shipmentId: order.shipment_id || null,
+    estimatedDelivery: order.estimated_delivery || null,
+  };
+
+  const [emailResult, smsResult, whatsappResult] = await Promise.all([
+    postNotification('NOTIFY_EMAIL_ENDPOINT', payload),
+    postNotification('NOTIFY_SMS_ENDPOINT', payload),
+    postNotification('NOTIFY_WHATSAPP_ENDPOINT', payload),
+  ]);
+
+  const failedServices = [];
+  if (emailResult.success === false && emailResult.reason === 'error') failedServices.push('email');
+  if (smsResult.success === false && smsResult.reason === 'error') failedServices.push('sms');
+  if (whatsappResult.success === false && whatsappResult.reason === 'error') failedServices.push('whatsapp');
+
+  if (failedServices.length > 0) {
+    console.error('[Notification] Failed to send shipment notifications for configured services', {
+      orderId: String(order._id),
+      failedServices,
+      emailResult,
+      smsResult,
+      whatsappResult,
+    });
+  }
+
+  const sentServices = [];
+  if (emailResult.success) sentServices.push('email');
+  if (smsResult.success) sentServices.push('sms');
+  if (whatsappResult.success) sentServices.push('whatsapp');
+
+  if (sentServices.length > 0) {
+    console.info('[Notification] Order shipment notifications sent successfully', {
+      orderId: String(order._id),
+      sentServices,
+    });
+  }
+}

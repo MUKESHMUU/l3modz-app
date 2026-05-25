@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import dbConnect from '@/lib/mongodb';
 import Order from '@/models/Order';
 import { markBillSent, refreshTracking, syncOrderToShiprocket } from '@/lib/orderFulfillment';
-import { sendOrderPaidNotifications } from '@/lib/notifications';
+import { sendOrderPaidNotifications, sendOrderShipmentNotifications } from '@/lib/notifications';
 
 export async function POST(req: Request) {
   try {
@@ -25,6 +25,14 @@ export async function POST(req: Request) {
     
     if (!order) {
       return NextResponse.json({ message: 'Order not found' }, { status: 404 });
+    }
+
+    if (order.isPaid && order.paymentResult?.razorpay_payment_id === razorpay_payment_id && order.paymentResult?.status === 'paid') {
+      return NextResponse.json({
+        message: 'Payment already verified',
+        orderId: order._id,
+        shipmentSynced: Boolean(order.shipment_id || order.AWB_number),
+      });
     }
 
     order.isPaid = true;
@@ -50,6 +58,12 @@ export async function POST(req: Request) {
 
     await order.save();
     await sendOrderPaidNotifications(order as any);
+
+    if (syncResult.ok && !order.shippingNotificationSentAt) {
+      await sendOrderShipmentNotifications(order as any);
+      order.shippingNotificationSentAt = new Date();
+      await order.save();
+    }
 
     return NextResponse.json({
       message: 'Payment verified successfully',
