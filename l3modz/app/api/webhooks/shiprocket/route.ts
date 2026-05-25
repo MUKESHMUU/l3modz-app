@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import dbConnect from '@/lib/mongodb';
 import Order from '@/models/Order';
 
@@ -38,12 +39,34 @@ function mapDeliveryStatus(rawStatus: string) {
 export async function POST(req: Request) {
   try {
     const secret = process.env.SHIPROCKET_WEBHOOK_SECRET;
+    const signatureHeader = req.headers.get('x-shiprocket-signature') || req.headers.get('x-webhook-signature') || req.headers.get('x-signature') || '';
     const incomingSecret = req.headers.get('x-shiprocket-secret') || req.headers.get('x-webhook-secret') || '';
-    if (secret && incomingSecret !== secret) {
-      return NextResponse.json({ message: 'Invalid webhook secret' }, { status: 401 });
+    const rawBody = await req.text();
+
+    // Prefer an HMAC signature check; keep the old shared-secret header as a compatibility fallback.
+    if (secret) {
+      const expectedHex = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+      const expectedBase64 = crypto.createHmac('sha256', secret).update(rawBody).digest('base64');
+      const matchesHmac = Boolean(signatureHeader) && [expectedHex, expectedBase64].includes(signatureHeader.trim());
+      const matchesLegacySecret = Boolean(incomingSecret) && incomingSecret === secret;
+
+      if (!matchesHmac && !matchesLegacySecret) {
+        console.warn('[Shiprocket webhook] Signature validation failed', {
+          timestamp: new Date().toISOString(),
+          hasSignatureHeader: Boolean(signatureHeader),
+          hasLegacySecretHeader: Boolean(incomingSecret),
+        });
+        return NextResponse.json({ message: 'Invalid webhook signature' }, { status: 401 });
+      }
     }
 
-    const body = await req.json();
+    const body = rawBody ? JSON.parse(rawBody) : {};
+    console.info('[Shiprocket webhook] Incoming event', {
+      timestamp: new Date().toISOString(),
+      hasAwb: Boolean(body?.awb || body?.awb_code || body?.data?.awb || body?.data?.awb_code),
+      hasShipmentId: Boolean(body?.shipment_id || body?.data?.shipment_id),
+      status: body?.current_status || body?.status || body?.shipment_status || body?.data?.current_status || body?.data?.status || null,
+    });
 
     const awb = pickStringValue(body, ['awb', 'awb_code', 'data.awb', 'data.awb_code', 'response.awb', 'response.awb_code']);
     const shipmentId = pickStringValue(body, ['shipment_id', 'data.shipment_id', 'response.shipment_id']);

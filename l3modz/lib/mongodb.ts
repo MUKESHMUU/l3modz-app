@@ -7,6 +7,7 @@ if (!MONGODB_URI) {
 }
 
 let cached = (global as any).mongoose;
+let shipmentFieldSafetyChecked = false;
 
 if (!cached) {
   cached = (global as any).mongoose = { conn: null, promise: null };
@@ -45,6 +46,40 @@ async function dbConnect() {
   } catch (e) {
     cached.promise = null;
     throw e;
+  }
+
+  if (!shipmentFieldSafetyChecked) {
+    shipmentFieldSafetyChecked = true;
+    try {
+      const { default: Order } = await import('@/models/Order');
+      const missingCount = await Order.countDocuments({
+        $or: [
+          { shiprocketTrackingHistory: { $exists: false } },
+          { shiprocketWebhookEventIds: { $exists: false } },
+          { shiprocketShipmentCreatedAt: { $exists: false } },
+          { shiprocketPickupRequestedAt: { $exists: false } },
+          { shiprocketShipmentUpdatedAt: { $exists: false } },
+          { shippingNotificationSentAt: { $exists: false } },
+          { shiprocketSyncError: { $exists: false } },
+          { shiprocketSyncAttempts: { $exists: false } },
+        ],
+      });
+
+      if (missingCount > 0) {
+        console.warn('[MongoDB] Shipment migration safety check found orders missing new shipment fields', {
+          missingCount,
+          checkedAt: new Date().toISOString(),
+        });
+      } else {
+        console.info('[MongoDB] Shipment migration safety check passed', {
+          checkedAt: new Date().toISOString(),
+        });
+      }
+    } catch (error: any) {
+      console.warn('[MongoDB] Shipment migration safety check skipped', {
+        message: error?.message || String(error),
+      });
+    }
   }
 
   return cached.conn;

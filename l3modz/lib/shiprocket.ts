@@ -42,12 +42,14 @@ const SHIPROCKET_DEBUG_ENABLED = ['1', 'true', 'yes', 'on'].includes(String(proc
 
 let cachedToken: string | null = null;
 let cachedTokenExpiry = 0;
+let tokenRefreshPromise: Promise<string> | null = null;
 let lastAuthAttemptAt: string | null = null;
 let lastAuthSuccessAt: string | null = null;
 let lastAuthStatus: number | null = null;
 let lastAuthError: string | null = null;
 let lastAuthResponseBody: string | null = null;
 let lastAuthEndpoint: string | null = null;
+const TOKEN_REFRESH_BUFFER_MS = 90 * 1000;
 
 type EnvInspection = {
   rawPresent: boolean;
@@ -105,6 +107,12 @@ function validatePositiveNumber(value: unknown, fallbackLabel: string) {
     throw new Error(`${fallbackLabel} must be a positive number`);
   }
   return numeric;
+}
+
+function isCachedTokenUsable(force = false) {
+  if (force) return false;
+  if (!cachedToken) return false;
+  return cachedTokenExpiry - TOKEN_REFRESH_BUFFER_MS > Date.now();
 }
 
 function getStringValue(value: unknown) {
@@ -232,130 +240,167 @@ async function sleep(ms: number) {
 async function authenticateShiprocket(force = false): Promise<string> {
   const authEndpoint = `${SHIPROCKET_BASE}/auth/login`;
   const config = validateRuntimeConfig();
-  const now = Date.now();
-  if (!force && cachedToken && cachedTokenExpiry > now) {
+  if (isCachedTokenUsable(force)) {
     debugLog('Reusing cached Shiprocket token', { expiresAt: new Date(cachedTokenExpiry).toISOString() });
-    return cachedToken;
+    return cachedToken as string;
   }
 
-  const passwordLength = config.password.length;
-  const passwordHasWhitespace = config.passwordInspection.trimmed || /[\r\n\t]/.test(String(process.env.SHIPROCKET_PASSWORD || ''));
+  if (tokenRefreshPromise) {
+    // Queue concurrent requests behind the in-flight refresh to avoid race conditions.
+    console.info('[Shiprocket] Token refresh already in progress, waiting', {
+      endpoint: authEndpoint,
+      timestamp: new Date().toISOString(),
+    });
+    return tokenRefreshPromise;
+  }
 
-  debugLog('Shiprocket auth env inspection', {
-    emailPresent: config.emailInspection.normalizedPresent,
-    emailValid: isValidEmail(config.email),
-    emailMasked: maskEmail(config.email),
-    emailTrimmed: config.emailInspection.trimmed,
-    emailHasWhitespace: config.emailInspection.hasControlWhitespace,
-    passwordPresent: config.passwordInspection.normalizedPresent,
-    passwordLength,
-    passwordTrimmed: config.passwordInspection.trimmed,
-    passwordHasWhitespace,
-    pickupLocationPresent: config.pickupLocationInspection.normalizedPresent,
-    pickupLocationTrimmed: config.pickupLocationInspection.trimmed,
-    pickupPincodePresent: config.pickupPincodeInspection.normalizedPresent,
-    pickupPincodeValid: !config.pickupPincode || isValidPincode(config.pickupPincode),
-    endpoint: authEndpoint,
-  });
+  tokenRefreshPromise = (async () => {
+    const now = Date.now();
 
-  lastAuthAttemptAt = new Date().toISOString();
-  lastAuthEndpoint = authEndpoint;
-  lastAuthError = null;
-  lastAuthResponseBody = null;
-  lastAuthStatus = null;
+    const passwordLength = config.password.length;
+    const passwordHasWhitespace = config.passwordInspection.trimmed || /[\r\n\t]/.test(String(process.env.SHIPROCKET_PASSWORD || ''));
 
-  const maxAttempts = 2;
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    try {
-      debugLog('Authenticating Shiprocket', {
-        attempt,
-        endpoint: authEndpoint,
-        email: maskEmail(config.email),
-        passwordLength,
-      });
+    debugLog('Shiprocket auth env inspection', {
+      emailPresent: config.emailInspection.normalizedPresent,
+      emailValid: isValidEmail(config.email),
+      emailMasked: maskEmail(config.email),
+      emailTrimmed: config.emailInspection.trimmed,
+      emailHasWhitespace: config.emailInspection.hasControlWhitespace,
+      passwordPresent: config.passwordInspection.normalizedPresent,
+      passwordLength,
+      passwordTrimmed: config.passwordInspection.trimmed,
+      passwordHasWhitespace,
+      pickupLocationPresent: config.pickupLocationInspection.normalizedPresent,
+      pickupLocationTrimmed: config.pickupLocationInspection.trimmed,
+      pickupPincodePresent: config.pickupPincodeInspection.normalizedPresent,
+      pickupPincodeValid: !config.pickupPincode || isValidPincode(config.pickupPincode),
+      endpoint: authEndpoint,
+    });
 
-      const res = await fetch(authEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: config.email, password: config.password }),
-        cache: 'no-store',
-      });
+    lastAuthAttemptAt = new Date().toISOString();
+    lastAuthEndpoint = authEndpoint;
+    lastAuthError = null;
+    lastAuthResponseBody = null;
+    lastAuthStatus = null;
 
-      lastAuthStatus = res.status;
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        lastAuthResponseBody = errorText;
-        const safeMessage =
-          res.status === 400 || res.status === 401 || res.status === 403
-            ? describeShiprocketAuthFailure(errorText)
-            : res.status >= 500
-              ? 'Shiprocket authentication service is unavailable.'
-              : `Shiprocket authentication failed with status ${res.status}`;
-
-        console.error('[Shiprocket] Auth failure', {
-          endpoint: authEndpoint,
-          status: res.status,
-          responseBody: errorText,
+    const maxAttempts = 2;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        debugLog('Authenticating Shiprocket', {
           attempt,
+          endpoint: authEndpoint,
+          email: maskEmail(config.email),
+          passwordLength,
+          timestamp: new Date().toISOString(),
         });
 
-        if (attempt < maxAttempts && res.status >= 500) {
+        const res = await fetch(authEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: config.email, password: config.password }),
+          cache: 'no-store',
+        });
+
+        lastAuthStatus = res.status;
+        console.info('[Shiprocket] Auth response', {
+          endpoint: authEndpoint,
+          status: res.status,
+          ok: res.ok,
+          attempt,
+          timestamp: new Date().toISOString(),
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          lastAuthResponseBody = errorText;
+          const safeMessage =
+            res.status === 400 || res.status === 401 || res.status === 403
+              ? describeShiprocketAuthFailure(errorText)
+              : res.status >= 500
+                ? 'Shiprocket authentication service is unavailable.'
+                : `Shiprocket authentication failed with status ${res.status}`;
+
+          console.error('[Shiprocket] Auth failure', {
+            endpoint: authEndpoint,
+            status: res.status,
+            responseBody: errorText,
+            attempt,
+            timestamp: new Date().toISOString(),
+          });
+
+          if (attempt < maxAttempts && res.status >= 500) {
+            await sleep(getRetryDelayMs(attempt));
+            continue;
+          }
+
+          lastAuthError = safeMessage;
+          throw new Error(safeMessage);
+        }
+
+        const data = (await res.json()) as ShiprocketAuthResponse;
+        if (!data?.token) {
+          lastAuthResponseBody = JSON.stringify(data);
+          lastAuthError = 'Shiprocket auth token missing in response';
+          console.error('[Shiprocket] Auth response missing token', {
+            endpoint: authEndpoint,
+            responseBody: data,
+            timestamp: new Date().toISOString(),
+          });
+          throw new Error('Shiprocket auth token missing in response');
+        }
+
+        cachedToken = data.token;
+        cachedTokenExpiry = now + 8 * 60 * 1000;
+        lastAuthSuccessAt = new Date().toISOString();
+        debugLog('Shiprocket auth succeeded', {
+          endpoint: authEndpoint,
+          tokenCached: true,
+          tokenExpiresAt: new Date(cachedTokenExpiry).toISOString(),
+        });
+        console.info('[Shiprocket] Auth succeeded', {
+          endpoint: authEndpoint,
+          tokenExpiresAt: new Date(cachedTokenExpiry).toISOString(),
+          timestamp: new Date().toISOString(),
+        });
+        return data.token;
+      } catch (error: any) {
+        const message = error?.message || String(error);
+        lastAuthError = message;
+        console.error('[Shiprocket] Auth exception', {
+          endpoint: authEndpoint,
+          attempt,
+          message,
+          timestamp: new Date().toISOString(),
+        });
+
+        if (attempt < maxAttempts && /network|fetch|timeout|ECONN|ETIMEDOUT/i.test(message)) {
           await sleep(getRetryDelayMs(attempt));
           continue;
         }
 
-        lastAuthError = safeMessage;
-        throw new Error(safeMessage);
+        throw error instanceof Error ? error : new Error(message);
       }
-
-      const data = (await res.json()) as ShiprocketAuthResponse;
-      if (!data?.token) {
-        lastAuthResponseBody = JSON.stringify(data);
-        lastAuthError = 'Shiprocket auth token missing in response';
-        console.error('[Shiprocket] Auth response missing token', {
-          endpoint: authEndpoint,
-          responseBody: data,
-        });
-        throw new Error('Shiprocket auth token missing in response');
-      }
-
-      cachedToken = data.token;
-      cachedTokenExpiry = now + 8 * 60 * 1000;
-      lastAuthSuccessAt = new Date().toISOString();
-      debugLog('Shiprocket auth succeeded', {
-        endpoint: authEndpoint,
-        tokenCached: true,
-        tokenExpiresAt: new Date(cachedTokenExpiry).toISOString(),
-      });
-      return data.token;
-    } catch (error: any) {
-      const message = error?.message || String(error);
-      lastAuthError = message;
-      console.error('[Shiprocket] Auth exception', {
-        endpoint: authEndpoint,
-        attempt,
-        message,
-      });
-
-      if (attempt < maxAttempts && /network|fetch|timeout|ECONN|ETIMEDOUT/i.test(message)) {
-        await sleep(getRetryDelayMs(attempt));
-        continue;
-      }
-
-      throw error instanceof Error ? error : new Error(message);
     }
-  }
 
-  throw new Error('Shiprocket authentication failed');
+    throw new Error('Shiprocket authentication failed');
+  })();
+
+  try {
+    return await tokenRefreshPromise;
+  } finally {
+    tokenRefreshPromise = null;
+  }
 }
 
 async function shiprocketRequest<T>(path: string, init: RequestInit = {}, attempts = 3): Promise<T> {
   let lastError: unknown;
+  const method = String(init.method || 'GET').toUpperCase();
 
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
-      debugLog('Shiprocket request start', { path, attempt: attempt + 1, attempts });
+      const startedAt = new Date().toISOString();
+      console.info('[Shiprocket] Request start', { path, method, attempt: attempt + 1, attempts, timestamp: startedAt });
+      debugLog('Shiprocket request start', { path, method, attempt: attempt + 1, attempts, startedAt });
       const token = await authenticateShiprocket(attempt > 0);
       const res = await fetch(`${SHIPROCKET_BASE}${path}`, {
         ...init,
@@ -365,6 +410,14 @@ async function shiprocketRequest<T>(path: string, init: RequestInit = {}, attemp
           ...(init.headers || {}),
         },
         cache: 'no-store',
+      });
+      console.info('[Shiprocket] Request response', {
+        path,
+        method,
+        status: res.status,
+        ok: res.ok,
+        attempt: attempt + 1,
+        timestamp: new Date().toISOString(),
       });
 
       if (res.status === 401 && attempt < attempts - 1) {
@@ -378,9 +431,11 @@ async function shiprocketRequest<T>(path: string, init: RequestInit = {}, attemp
         const body = await res.text();
         console.error('[Shiprocket] Request failed', {
           path,
+          method,
           status: res.status,
           responseBody: body,
           attempt: attempt + 1,
+          timestamp: new Date().toISOString(),
         });
         if (attempt < attempts - 1 && isRetryableShiprocketStatus(res.status)) {
           await sleep(getRetryDelayMs(attempt));
@@ -391,13 +446,21 @@ async function shiprocketRequest<T>(path: string, init: RequestInit = {}, attemp
 
       debugLog('Shiprocket request succeeded', { path, attempt: attempt + 1 });
       const responseText = await res.text();
+      console.info('[Shiprocket] Request body received', {
+        path,
+        method,
+        status: res.status,
+        timestamp: new Date().toISOString(),
+      });
       return parseShiprocketResponseBody(responseText) as T;
     } catch (error) {
       lastError = error;
       console.error('[Shiprocket] Request exception', {
         path,
+        method,
         attempt: attempt + 1,
         message: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString(),
       });
       if (attempt < attempts - 1) {
         await sleep(getRetryDelayMs(attempt));
@@ -479,6 +542,42 @@ export async function checkPincodeServiceability(params: ServiceabilityParams) {
         : 'Unable to verify delivery serviceability at this time',
     };
   }
+}
+
+export async function simulateShiprocketConcurrentApiCalls() {
+  const { pickupPincode } = validateRuntimeConfig({ requirePickupPincode: true });
+  if (!pickupPincode) {
+    return { ok: false, skipped: true, message: 'Pickup pincode not configured' };
+  }
+
+  const query = new URLSearchParams({
+    pickup_postcode: pickupPincode,
+    delivery_postcode: pickupPincode,
+    cod: '0',
+    weight: '0.5',
+  });
+
+  const startedAt = new Date().toISOString();
+  const results = await Promise.allSettled(
+    Array.from({ length: 5 }, async (_, index) => {
+      console.info('[Shiprocket] Concurrency test request start', { index: index + 1, timestamp: new Date().toISOString() });
+      return shiprocketRequest<any>(`/courier/serviceability/?${query.toString()}`, { method: 'GET' }, 1);
+    })
+  );
+
+  const failures = results.filter((result) => result.status === 'rejected');
+  console.info('[Shiprocket] Concurrency test complete', {
+    startedAt,
+    completedAt: new Date().toISOString(),
+    total: results.length,
+    failures: failures.length,
+  });
+
+  return {
+    ok: failures.length === 0,
+    total: results.length,
+    failures: failures.length,
+  };
 }
 
 export async function createShiprocketOrder(order: IOrder): Promise<CreateOrderResult> {
@@ -746,6 +845,24 @@ export async function getShiprocketDiagnostics() {
     pingMessage = err?.message || String(err);
   }
 
+  let concurrencyTest: { ok: boolean; total?: number; failures?: number; skipped?: boolean; message?: string } | null = null;
+  if (['1', 'true', 'yes', 'on'].includes(String(process.env.SHIPROCKET_RUN_CONCURRENCY_TEST || '').toLowerCase())) {
+    try {
+      concurrencyTest = await simulateShiprocketConcurrentApiCalls();
+    } catch (err: any) {
+      concurrencyTest = {
+        ok: false,
+        message: err?.message || String(err),
+      };
+    }
+  } else {
+    concurrencyTest = {
+      ok: false,
+      skipped: true,
+      message: 'Set SHIPROCKET_RUN_CONCURRENCY_TEST=true to run the 5-request concurrency test',
+    };
+  }
+
   return {
     debugEnabled: SHIPROCKET_DEBUG_ENABLED,
     envs,
@@ -766,5 +883,6 @@ export async function getShiprocketDiagnostics() {
       pingOk,
       pingMessage,
     },
+    concurrencyTest,
   };
 }

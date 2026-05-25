@@ -2,6 +2,7 @@ import type { IOrder } from '@/models/Order';
 import {
   assignBestCourier,
   createShiprocketOrder,
+  checkPincodeServiceability,
   generatePickup,
   generateShippingLabel,
   trackShipmentByAwb,
@@ -31,6 +32,39 @@ function appendShipmentHistory(
     source: entry.source,
   });
   order.shiprocketTrackingHistory = history.slice(-25);
+}
+
+function normalizeCourierLabel(value: string) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function getPreferredCourierName() {
+  return String(process.env.SHIPROCKET_PREFERRED_COURIER_NAME || '').trim();
+}
+
+async function resolveCourierFallback(order: IOrder) {
+  const preferredName = getPreferredCourierName();
+  const pincode = String(order.shippingAddress?.pincode || '').trim();
+  if (!pincode) return preferredName || '';
+
+  const serviceability = await checkPincodeServiceability({
+    deliveryPincode: pincode,
+    cod: !order.isPaid,
+    weightKg: Number(order.packageWeightKg || 0.5),
+  });
+
+  const availableCouriers = Array.isArray(serviceability.couriers) ? serviceability.couriers : [];
+  const preferredMatch = availableCouriers.find((courier: any) => {
+    const name = courier?.courier_name || courier?.courier_company_name || courier?.company_name || '';
+    return preferredName && normalizeCourierLabel(name) === normalizeCourierLabel(preferredName);
+  });
+
+  if (preferredMatch) {
+    return String(preferredMatch.courier_name || preferredMatch.courier_company_name || preferredMatch.company_name || preferredName).trim();
+  }
+
+  const firstAvailable = availableCouriers[0];
+  return String(firstAvailable?.courier_name || firstAvailable?.courier_company_name || firstAvailable?.company_name || preferredName || '').trim();
 }
 
 function applyDeliveryStateToOrder(order: IOrder, deliveryStatusRaw: string) {
@@ -95,6 +129,18 @@ export async function syncOrderToShiprocket(order: IOrder) {
       }
       if (awb.courierName) {
         order.courier_name = awb.courierName;
+      } else {
+        const fallbackCourier = await resolveCourierFallback(order);
+        if (fallbackCourier) {
+          order.courier_name = fallbackCourier;
+          appendShipmentHistory(order, {
+            status: 'courier_fallback_selected',
+            message: `Fallback courier selected: ${fallbackCourier}`,
+            awb: order.AWB_number,
+            shipmentId: order.shipment_id,
+            source: 'retry',
+          });
+        }
       }
     }
 
