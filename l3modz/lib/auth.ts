@@ -1,11 +1,10 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { validateProductionEnv, requireEnv } from './env';
 
-const JWT_SECRET = process.env.JWT_SECRET;
+validateProductionEnv();
 
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET is required');
-}
+const JWT_SECRET = requireEnv('JWT_SECRET');
 
 export const signToken = (payload: object, expiresIn: jwt.SignOptions['expiresIn'] = '7d') => {
   return jwt.sign(payload, JWT_SECRET, { expiresIn });

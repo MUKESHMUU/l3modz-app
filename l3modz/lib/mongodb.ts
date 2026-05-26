@@ -1,10 +1,9 @@
 import mongoose from 'mongoose';
+import { validateProductionEnv, requireEnv } from './env';
 
-const MONGODB_URI = process.env.MONGODB_URI!;
+validateProductionEnv();
 
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
-}
+const MONGODB_URI = requireEnv('MONGODB_URI');
 
 let cached = (global as any).mongoose;
 let shipmentFieldSafetyChecked = false;
@@ -62,6 +61,9 @@ async function dbConnect() {
           { shippingNotificationSentAt: { $exists: false } },
           { shiprocketSyncError: { $exists: false } },
           { shiprocketSyncAttempts: { $exists: false } },
+          { shipmentCreationRetryAttempts: { $exists: false } },
+          { trackingSyncRetryAttempts: { $exists: false } },
+          { notificationRetryAttempts: { $exists: false } },
         ],
       });
 

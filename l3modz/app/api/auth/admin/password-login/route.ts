@@ -3,9 +3,10 @@ import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import { comparePassword, getAuthCookieOptions, hashPassword, signToken } from '@/lib/auth';
 import { cookies } from 'next/headers';
+import { getEnvValue, validateProductionEnv } from '@/lib/env';
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@l3modz.com';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'l3modz@admin2022';
+const ADMIN_EMAIL = getEnvValue('ADMIN_EMAIL') || 'admin@l3modz.com';
+const ADMIN_PASSWORD = getEnvValue('ADMIN_PASSWORD') || 'l3modz@admin2022';
 
 function normalizeEmail(raw: string) {
   return (raw || '').toLowerCase().trim();
@@ -13,6 +14,13 @@ function normalizeEmail(raw: string) {
 
 export async function POST(req: Request) {
   try {
+    if (process.env.NODE_ENV === 'production') {
+      validateProductionEnv();
+      if (!getEnvValue('ADMIN_EMAIL') || !getEnvValue('ADMIN_PASSWORD')) {
+        return NextResponse.json({ message: 'Admin login is not configured' }, { status: 503 });
+      }
+    }
+
     await dbConnect();
     const body = await req.json().catch(() => ({}));
     const email = normalizeEmail(body.email || '');

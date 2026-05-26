@@ -4,13 +4,21 @@ import dbConnect from '@/lib/mongodb';
 import Order from '@/models/Order';
 import { markBillSent, refreshTracking, syncOrderToShiprocket } from '@/lib/orderFulfillment';
 import { sendOrderPaidNotifications, sendOrderShipmentNotifications } from '@/lib/notifications';
+import { getEnvValue, validateProductionEnv } from '@/lib/env';
 
 export async function POST(req: Request) {
   try {
+    if (process.env.NODE_ENV === 'production') {
+      validateProductionEnv();
+    }
+
     await dbConnect();
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = await req.json();
 
-    const secret = process.env.RAZORPAY_KEY_SECRET || 'dummy_secret';
+    const secret = getEnvValue('RAZORPAY_KEY_SECRET') || getEnvValue('RAZORPAY_SECRET');
+    if (!secret) {
+      return NextResponse.json({ message: 'Payment verification is temporarily unavailable' }, { status: 503 });
+    }
 
     const shasum = crypto.createHmac('sha256', secret);
     shasum.update(`${razorpay_order_id}|${razorpay_payment_id}`);
@@ -72,6 +80,6 @@ export async function POST(req: Request) {
       shipmentError: autoShiprocketOnPayment && !syncResult.ok ? syncResult.error : undefined,
     });
   } catch (error: any) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
+    return NextResponse.json({ message: 'Failed to verify payment' }, { status: 500 });
   }
 }

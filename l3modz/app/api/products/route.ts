@@ -38,7 +38,7 @@ export async function GET(req: Request) {
     const products = await Product.find(query).limit(limit).sort({ createdAt: -1 });
     return NextResponse.json(products);
   } catch (error: any) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
+    return NextResponse.json({ message: 'Failed to load products' }, { status: 500 });
   }
 }
 
@@ -68,6 +68,6 @@ export async function POST(req: Request) {
     });
     return NextResponse.json(product, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
+    return NextResponse.json({ message: 'Failed to create product' }, { status: 500 });
   }
 }

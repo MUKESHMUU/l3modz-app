@@ -29,7 +29,7 @@ export async function GET() {
 
     return NextResponse.json(orders);
   } catch (error: any) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
+    return NextResponse.json({ message: 'Failed to load orders' }, { status: 500 });
   }
 }
 
@@ -142,6 +142,6 @@ export async function POST(req: Request) {
       currency: options.currency
     }, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
+    return NextResponse.json({ message: 'Failed to create order' }, { status: 500 });
   }
 }

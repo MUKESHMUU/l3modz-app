@@ -14,6 +14,8 @@ import Checkout from "./pages/Checkout";
 import ProductDetails from "./pages/ProductDetails";
 import Products from "./pages/Products";
 import Profile from "./pages/Profile";
+import OrderDetails from "./pages/OrderDetails";
+import TrackOrder from "./pages/TrackOrder";
 import AboutUs from "./pages/AboutUs";
 import ContactUs from "./pages/ContactUs";
 import OurDealers from "./pages/OurDealers";
@@ -131,6 +133,8 @@ function AppShell() {
           <Route path="/products" element={<Products />} />
           <Route path="/products/:id" element={<ProductDetails />} />
           <Route path="/profile" element={<ProtectedUserRoute><Profile /></ProtectedUserRoute>} />
+          <Route path="/orders/:id" element={<ProtectedUserRoute><OrderDetails /></ProtectedUserRoute>} />
+          <Route path="/track-order" element={<TrackOrder />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/about" element={<AboutUs />} />

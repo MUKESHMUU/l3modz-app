@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import Button from '@/components/Button';
+import ShipmentDetailsCard from '@/components/ShipmentDetailsCard';
 import { apiFetch } from '@/lib/api';
 import { LogOut, Package } from 'lucide-react';
 
@@ -8,6 +9,7 @@ export default function ProfilePage() {
   const [user, setUser] = useState<{name: string, email: string} | null>(null);
   const [orders, setOrders] = useState<any[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
+  const hasLoadedOrdersRef = useRef(false);
 
   const navigate = useNavigate();
 
@@ -18,21 +20,34 @@ export default function ProfilePage() {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchOrders() {
-      setLoadingOrders(true);
+      if (!hasLoadedOrdersRef.current) {
+        setLoadingOrders(true);
+      }
       try {
         const sessionRes = await apiFetch('/api/auth/session', { credentials: 'include', cache: 'no-store' });
         if (sessionRes.ok) {
           const sessionData = await sessionRes.json();
-          setUser(sessionData?.user ? { name: sessionData.user.name, email: sessionData.user.email } : null);
+          if (!cancelled) {
+            setUser(sessionData?.user ? { name: sessionData.user.name, email: sessionData.user.email } : null);
+          }
         }
 
-        const res = await apiFetch('/api/orders', { credentials: 'include' });
+        const res = await apiFetch('/api/orders', { credentials: 'include', cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
-        setOrders(Array.isArray(data) ? data : []);
+        if (!cancelled) {
+          setOrders(Array.isArray(data) ? data : []);
+        }
+        hasLoadedOrdersRef.current = true;
+      } catch (error) {
+        console.error('[Profile] Failed to refresh orders', error);
       } finally {
-        setLoadingOrders(false);
+        if (!cancelled && !hasLoadedOrdersRef.current) {
+          setLoadingOrders(false);
+        }
       }
     }
 
@@ -40,9 +55,22 @@ export default function ProfilePage() {
 
     const intervalId = window.setInterval(() => {
       fetchOrders();
-    }, 60000);
+    }, 30000);
 
-    return () => window.clearInterval(intervalId);
+    const handleRefresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      fetchOrders();
+    };
+
+    window.addEventListener('focus', handleRefresh);
+    document.addEventListener('visibilitychange', handleRefresh);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleRefresh);
+      document.removeEventListener('visibilitychange', handleRefresh);
+    };
   }, []);
 
   return (
@@ -76,7 +104,7 @@ export default function ProfilePage() {
           ) : (
             <div className="space-y-3">
               {orders.map((order) => (
-                <div key={order._id} className="rounded-xl border border-brand-border bg-gray-50 p-4">
+                <div key={order._id} className="rounded-xl border border-brand-border bg-gray-50 p-4 sm:p-5">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <p className="font-semibold text-brand-text">Order #{String(order._id).slice(-8)}</p>
@@ -88,18 +116,31 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2 text-sm text-gray-700">
-                    <p><span className="font-semibold">Delivery:</span> {order.delivery_status || '-'}</p>
-                    <p><span className="font-semibold">Courier:</span> {order.courier_name || '-'}</p>
-                    <p><span className="font-semibold">AWB:</span> {order.AWB_number || '-'}</p>
-                    <p><span className="font-semibold">Estimated Delivery:</span> {order.estimated_delivery ? new Date(order.estimated_delivery).toLocaleDateString() : '-'}</p>
+                  <div className="mt-4">
+                    <ShipmentDetailsCard
+                      order={order}
+                      title="Shipment Snapshot"
+                      compact
+                      showHistory={false}
+                      detailsHref={`/orders/${order._id}`}
+                      className="shadow-none"
+                    />
                   </div>
 
-                  {order.tracking_url && (
-                    <a href={order.tracking_url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex text-sm font-semibold text-brand-primary hover:underline">
-                      Track Shipment
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <Link
+                      to={`/orders/${order._id}`}
+                      className="inline-flex items-center justify-center rounded-full border-2 border-brand-primary px-4 py-2 text-sm font-semibold text-brand-primary transition-colors hover:bg-brand-primary hover:text-white"
+                    >
+                      View order details
+                    </Link>
+                    <a
+                      href={`/api/orders/${order._id}/invoice`}
+                      className="inline-flex items-center justify-center rounded-full border-2 border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:border-brand-primary hover:text-brand-primary"
+                    >
+                      Download Invoice
                     </a>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>

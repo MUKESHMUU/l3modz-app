@@ -1,5 +1,9 @@
 import type { IOrder } from '@/models/Order';
 import nodemailer from 'nodemailer';
+import { generateInvoicePdfBuffer } from '@/lib/invoice';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('notifications');
 
 type NotificationPayload = Record<string, unknown> & {
   type?: string;
@@ -13,6 +17,10 @@ type NotificationPayload = Record<string, unknown> & {
   courierName?: string | null;
   status?: string;
   deliveryStatus?: string;
+  invoicePdfBase64?: string;
+  invoiceFilename?: string;
+  supportEmail?: string;
+  supportPhone?: string;
 };
 
 let smtpTransporter: nodemailer.Transporter | null = null;
@@ -53,6 +61,8 @@ function buildEmailContent(payload: NotificationPayload) {
   const status = String(payload.status || payload.deliveryStatus || '');
   const deliveryPartner = String(payload.deliveryPartner || '');
   const courierName = String(payload.courierName || '');
+  const supportEmail = String(payload.supportEmail || process.env.COMPANY_SUPPORT_EMAIL || process.env.SMTP_FROM || 'support@l3modz.com');
+  const supportPhone = String(payload.supportPhone || process.env.COMPANY_SUPPORT_PHONE || process.env.WHATSAPP_SUPPORT_NUMBER || '+91 98431 99393');
 
   const subjectMap: Record<string, string> = {
     ORDER_PAID: `Payment confirmed${orderId ? ` • Order ${orderId.slice(-8)}` : ''}`,
@@ -72,6 +82,7 @@ function buildEmailContent(payload: NotificationPayload) {
     courierName ? `Courier: ${courierName}` : '',
     awb ? `AWB: ${awb}` : '',
     trackingUrl ? `Tracking Link: ${trackingUrl}` : '',
+    `Support: ${supportEmail} / ${supportPhone}`,
     '',
     'Thank you for shopping with L3 MODZ.',
   ].filter(Boolean);
@@ -90,6 +101,7 @@ function buildEmailContent(payload: NotificationPayload) {
         ${awb ? `<tr><td><strong>AWB</strong></td><td>${awb}</td></tr>` : ''}
       </table>
       ${trackingUrl ? `<p><a href="${trackingUrl}" target="_blank" rel="noreferrer">Track your shipment</a></p>` : ''}
+      <p style="font-size:12px;color:#6b7280">Support: ${supportEmail} | ${supportPhone}</p>
       <p>Thank you for shopping with L3 MODZ.</p>
     </div>`;
 
@@ -113,6 +125,24 @@ async function sendEmailWithSmtp(payload: NotificationPayload) {
   }
 
   const { subject, text, html } = buildEmailContent(payload);
+  let attachments: nodemailer.SendMailOptions['attachments'];
+  if (payload.invoicePdfBase64 && payload.invoiceFilename) {
+    try {
+      attachments = [
+        {
+          filename: payload.invoiceFilename,
+          content: Buffer.from(String(payload.invoicePdfBase64), 'base64'),
+          contentType: 'application/pdf',
+        },
+      ];
+    } catch (error: any) {
+      logger.warn('invoice_attachment_skipped', {
+        recipient,
+        subject,
+        error: error?.message || String(error),
+      });
+    }
+  }
   const maxAttempts = 3;
   let lastError: string | undefined;
 
@@ -131,6 +161,7 @@ async function sendEmailWithSmtp(payload: NotificationPayload) {
         subject,
         text,
         html,
+        attachments,
       });
 
       console.info('[Notification] SMTP send success', {
@@ -148,6 +179,12 @@ async function sendEmailWithSmtp(payload: NotificationPayload) {
         recipient,
         error: lastError,
         timestamp: new Date().toISOString(),
+      });
+      logger.error('smtp_send_failed', {
+        attempt,
+        recipient,
+        subject,
+        error: lastError,
       });
       if (attempt < maxAttempts && /network|timeout|ETIMEDOUT|ECONN|rate/i.test(lastError || '')) {
         continue;
@@ -230,12 +267,52 @@ async function postNotification(endpointEnv: string, payload: Record<string, unk
   return { success: false, reason: 'error', error: lastError || 'Notification delivery failed' };
 }
 
+async function buildInvoiceAttachment(order: IOrder) {
+  try {
+    const invoiceNumber = order.invoiceNumber || `INV-${String(order._id).slice(-8).toUpperCase()}`;
+    const pdf = await generateInvoicePdfBuffer(order, { invoiceNumber });
+    return {
+      invoiceNumber,
+      invoicePdfBase64: pdf.toString('base64'),
+      invoiceFilename: `${invoiceNumber}.pdf`,
+    };
+  } catch (error: any) {
+    logger.warn('invoice_pdf_generation_failed', {
+      orderId: String(order._id),
+      error: error?.message || String(error),
+    });
+    return {
+      invoiceNumber: order.invoiceNumber || `INV-${String(order._id).slice(-8).toUpperCase()}`,
+    };
+  }
+}
+
+async function persistNotificationRetry(order: IOrder, reason: string) {
+  const nextAttempt = Number(order.notificationRetryAttempts || 0) + 1;
+  order.notificationRetryAttempts = nextAttempt;
+  order.retryCount = Number(order.retryCount || 0) + 1;
+  order.lastRetryAt = new Date();
+  order.retryStatus = nextAttempt >= 5 ? 'permanently_failed' : 'scheduled';
+  const delayMinutes = Math.min(180, Math.max(15, 15 * Math.pow(2, Math.min(nextAttempt - 1, 4))));
+  order.notificationRetryError = reason;
+  order.notificationRetryNextAt = new Date(Date.now() + delayMinutes * 60 * 1000);
+  logger.warn('notification_retry_scheduled', {
+    orderId: String(order._id),
+    reason,
+    attempts: nextAttempt,
+    nextAt: order.notificationRetryNextAt?.toISOString() || null,
+  });
+  if (typeof (order as any).save === 'function') {
+    await (order as any).save();
+  }
+}
+
 export async function sendOrderPaidNotifications(order: IOrder) {
   const customerName = order.guestInfo?.name || 'Customer';
   const customerEmail = order.guestInfo?.email || '';
   const customerPhone = order.guestInfo?.phone || '';
 
-  const payload = {
+  const payload: NotificationPayload = {
     type: 'ORDER_PAID',
     orderId: String(order._id),
     invoiceNumber: order.invoiceNumber,
@@ -247,7 +324,15 @@ export async function sendOrderPaidNotifications(order: IOrder) {
     status: order.status,
     trackingUrl: order.tracking_url || null,
     awb: order.AWB_number || null,
+    supportEmail: process.env.COMPANY_SUPPORT_EMAIL || process.env.SMTP_FROM || 'support@l3modz.com',
+    supportPhone: process.env.COMPANY_SUPPORT_PHONE || process.env.WHATSAPP_SUPPORT_NUMBER || '+91 98431 99393',
   };
+
+  const invoiceAttachment = await buildInvoiceAttachment(order);
+  if (invoiceAttachment.invoicePdfBase64) {
+    payload.invoicePdfBase64 = invoiceAttachment.invoicePdfBase64;
+    payload.invoiceFilename = invoiceAttachment.invoiceFilename;
+  }
 
   const [emailResult, smsResult, whatsappResult] = await Promise.all([
     postNotification('NOTIFY_EMAIL_ENDPOINT', payload),
@@ -269,6 +354,7 @@ export async function sendOrderPaidNotifications(order: IOrder) {
       smsResult,
       whatsappResult,
     });
+    await persistNotificationRetry(order, `payment_notifications_failed:${failedServices.join(',')}`);
   }
 
   // Log successful sends for monitoring
@@ -300,7 +386,7 @@ export async function sendOrderBillNotifications(order: IOrder) {
     total: item.price * item.quantity
   })) || [];
 
-  const payload = {
+  const payload: NotificationPayload = {
     type: 'ORDER_BILL',
     orderId: String(order._id),
     invoiceNumber,
@@ -315,7 +401,15 @@ export async function sendOrderBillNotifications(order: IOrder) {
     createdAt: order.createdAt,
     razorpayOrderId: order.paymentResult?.razorpay_order_id,
     paymentInstructions: 'Please complete your payment using the Razorpay payment link to confirm your order.',
+    supportEmail: process.env.COMPANY_SUPPORT_EMAIL || process.env.SMTP_FROM || 'support@l3modz.com',
+    supportPhone: process.env.COMPANY_SUPPORT_PHONE || process.env.WHATSAPP_SUPPORT_NUMBER || '+91 98431 99393',
   };
+
+  const invoiceAttachment = await buildInvoiceAttachment(order);
+  if (invoiceAttachment.invoicePdfBase64) {
+    payload.invoicePdfBase64 = invoiceAttachment.invoicePdfBase64;
+    payload.invoiceFilename = invoiceAttachment.invoiceFilename;
+  }
 
   const [emailResult, smsResult, whatsappResult] = await Promise.all([
     postNotification('NOTIFY_EMAIL_ENDPOINT', payload),
@@ -337,6 +431,7 @@ export async function sendOrderBillNotifications(order: IOrder) {
       smsResult,
       whatsappResult,
     });
+    await persistNotificationRetry(order, `bill_notifications_failed:${failedServices.join(',')}`);
   }
 
   // Log successful sends for monitoring
@@ -358,7 +453,7 @@ export async function sendOrderShipmentNotifications(order: IOrder) {
   const customerEmail = order.guestInfo?.email || '';
   const customerPhone = order.guestInfo?.phone || '';
 
-  const payload = {
+  const payload: NotificationPayload = {
     type: 'ORDER_SHIPPED',
     orderId: String(order._id),
     invoiceNumber: order.invoiceNumber,
@@ -374,7 +469,15 @@ export async function sendOrderShipmentNotifications(order: IOrder) {
     trackingUrl: order.tracking_url || null,
     shipmentId: order.shipment_id || null,
     estimatedDelivery: order.estimated_delivery || null,
+    supportEmail: process.env.COMPANY_SUPPORT_EMAIL || process.env.SMTP_FROM || 'support@l3modz.com',
+    supportPhone: process.env.COMPANY_SUPPORT_PHONE || process.env.WHATSAPP_SUPPORT_NUMBER || '+91 98431 99393',
   };
+
+  const invoiceAttachment = await buildInvoiceAttachment(order);
+  if (invoiceAttachment.invoicePdfBase64) {
+    payload.invoicePdfBase64 = invoiceAttachment.invoicePdfBase64;
+    payload.invoiceFilename = invoiceAttachment.invoiceFilename;
+  }
 
   const [emailResult, smsResult, whatsappResult] = await Promise.all([
     postNotification('NOTIFY_EMAIL_ENDPOINT', payload),
@@ -395,6 +498,7 @@ export async function sendOrderShipmentNotifications(order: IOrder) {
       smsResult,
       whatsappResult,
     });
+    await persistNotificationRetry(order, `shipment_notifications_failed:${failedServices.join(',')}`);
   }
 
   const sentServices = [];

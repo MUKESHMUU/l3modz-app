@@ -78,6 +78,18 @@ export interface IOrder extends Document {
   shiprocketLastSyncAt?: Date;
   shiprocketSyncAttempts?: number;
   shiprocketSyncError?: string;
+  shipmentCreationRetryAttempts?: number;
+  shipmentCreationRetryError?: string;
+  shipmentCreationRetryNextAt?: Date;
+  trackingSyncRetryAttempts?: number;
+  trackingSyncRetryError?: string;
+  trackingSyncRetryNextAt?: Date;
+  notificationRetryAttempts?: number;
+  notificationRetryError?: string;
+  notificationRetryNextAt?: Date;
+  retryCount?: number;
+  lastRetryAt?: Date;
+  retryStatus?: 'scheduled' | 'retrying' | 'permanently_failed' | 'succeeded';
 }
 
 const orderSchema = new Schema<IOrder>(
@@ -165,6 +177,18 @@ const orderSchema = new Schema<IOrder>(
     shiprocketLastSyncAt: { type: Date, default: null },
     shiprocketSyncAttempts: { type: Number, default: 0 },
     shiprocketSyncError: { type: String, default: '' },
+    shipmentCreationRetryAttempts: { type: Number, default: 0 },
+    shipmentCreationRetryError: { type: String, default: '' },
+    shipmentCreationRetryNextAt: { type: Date, default: null },
+    trackingSyncRetryAttempts: { type: Number, default: 0 },
+    trackingSyncRetryError: { type: String, default: '' },
+    trackingSyncRetryNextAt: { type: Date, default: null },
+    notificationRetryAttempts: { type: Number, default: 0 },
+    notificationRetryError: { type: String, default: '' },
+    notificationRetryNextAt: { type: Date, default: null },
+    retryCount: { type: Number, default: 0 },
+    lastRetryAt: { type: Date, default: null },
+    retryStatus: { type: String, enum: ['scheduled', 'retrying', 'permanently_failed', 'succeeded'], default: 'succeeded' },
   },
   { timestamps: true }
 );

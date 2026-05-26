@@ -23,6 +23,7 @@ const mainLinks = [
   { name: 'HOME', path: '/' },
   { name: 'ABOUT US', path: '/about' },
   { name: 'CONTACT US', path: '/contact' },
+  { name: 'TRACK ORDER', path: '/track-order' },
   { name: 'OUR DEALERS', path: '/dealers' },
 ];
 
