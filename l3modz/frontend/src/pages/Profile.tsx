@@ -36,17 +36,19 @@ export default function ProfilePage() {
         }
 
         const res = await apiFetch('/api/orders', { credentials: 'include', cache: 'no-store' });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled) {
-          setOrders(Array.isArray(data) ? data : []);
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) {
+            setOrders(Array.isArray(data) ? data : []);
+          }
         }
         hasLoadedOrdersRef.current = true;
       } catch (error) {
         console.error('[Profile] Failed to refresh orders', error);
       } finally {
-        if (!cancelled && !hasLoadedOrdersRef.current) {
+        if (!cancelled) {
           setLoadingOrders(false);
+          hasLoadedOrdersRef.current = true;
         }
       }
     }
