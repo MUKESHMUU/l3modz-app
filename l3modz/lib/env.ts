@@ -1,12 +1,12 @@
 const REQUIRED_PRODUCTION_ENV_VARS = [
   'MONGODB_URI',
   'JWT_SECRET',
-  'NEXTAUTH_SECRET',
+  //'NEXTAUTH_SECRET',
   'RAZORPAY_KEY_ID',
   'RAZORPAY_KEY_SECRET',
   'SHIPROCKET_EMAIL',
   'SHIPROCKET_PASSWORD',
-  'CRON_SECRET',
+  //'CRON_SECRET',
 ] as const;
 
 let productionEnvValidated = false;
