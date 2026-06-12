@@ -1149,8 +1149,14 @@ export default function AdminPanelPage() {
   const filteredOrders = useMemo(() => {
     return orders.filter((o) => {
       const q = orderSearch.trim().toLowerCase();
-      const customer = `${o.user?.name || ''} ${o.user?.email || ''}`.toLowerCase();
-      const matchesSearch = !q || o._id.toLowerCase().includes(q) || customer.includes(q);
+      const matchesSearch =
+        !q ||
+        o._id.toLowerCase().includes(q) ||
+        (o.user?.name || '').toLowerCase().includes(q) ||
+        (o.user?.email || '').toLowerCase().includes(q) ||
+        (o.guestInfo?.email || '').toLowerCase().includes(q) ||
+        (o.guestInfo?.phone || '').includes(q) ||
+        (o.guestInfo?.name || '').toLowerCase().includes(q);
       const matchesStatus = orderStatusFilter === 'all' || (o.status || 'Pending') === orderStatusFilter;
       return matchesSearch && matchesStatus;
     });
@@ -1824,7 +1830,7 @@ export default function AdminPanelPage() {
               <div className="rounded-2xl border border-brand-border bg-white p-4">
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <input
-                    placeholder="Search order id, name, or email"
+                    placeholder="Search by Order ID, name, email, or phone"
                     value={orderSearch}
                     onChange={(e) => setOrderSearch(e.target.value)}
                     className="rounded-lg border border-brand-border px-3 py-2"
