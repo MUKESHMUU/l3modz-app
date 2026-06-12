@@ -1134,13 +1134,6 @@ export default function AdminPanelPage() {
     setSelectedUser(null);
   };
 
-  const closeProductDetails = () => {
-    setSelectedProduct(null);
-    setProductModalMode(null);
-    setProductDraft(null);
-    setEditingProductId('');
-  };
-
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
       const q = productSearch.trim().toLowerCase();
