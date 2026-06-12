@@ -37,6 +37,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     
     // Explicitly log incoming stock value for debugging
     console.log('[Products PUT] Incoming stock:', body?.stock, 'Type:', typeof body?.stock);
+     // Explicitly log incoming originalPrice value for debugging
+    console.log('[Products PUT] Incoming originalPrice:', body?.originalPrice, 'Type:', typeof body?.originalPrice);
     
     const rawStock = body?.stock;
     const stockValue = rawStock === undefined || rawStock === null || rawStock === '' ? 0 : Number(rawStock);
@@ -69,6 +71,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     
     console.log('[Products PUT] Update payload keys:', Object.keys(updatePayload));
     console.log('[Products PUT] Stock in payload:', updatePayload.stock);
+    console.log('[Products PUT] originalPrice in payload:', updatePayload.originalPrice);
     
     // Log before update
     const existingProduct = await Product.findById(id);
@@ -81,7 +84,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
     
     console.log('[Products PUT] After update - returned stock:', product.stock);
-    console.log('[Products PUT] Full updated product:', { title: product.title, price: product.price, stock: product.stock });
+    console.log('[Products PUT] After update - returned originalPrice:', product.originalPrice);
+    console.log('[Products PUT] Full updated product:', { title: product.title, price: product.price, originalPrice: product.originalPrice, stock: product.stock });
 
     return NextResponse.json(product);
   } catch (error: any) {

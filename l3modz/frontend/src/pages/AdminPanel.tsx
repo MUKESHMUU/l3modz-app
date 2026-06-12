@@ -948,6 +948,8 @@ export default function AdminPanelPage() {
       const payload = buildProductPayload(productDraft);
       console.log('[Save Product Details] Payload:', payload);
       console.log('[Save Product Details] Stock in payload:', payload.stock);
+      console.log('[Save Product Details] MRP/originalPrice in payload:', payload.originalPrice);
+      console.log('[Save Product Details] productDraft.originalPrice:', productDraft.originalPrice);
       
       const res = await fetch(`/api/products/${selectedProduct._id}`, {
         method: 'PUT',
@@ -960,6 +962,7 @@ export default function AdminPanelPage() {
       console.log('[Save Product Details] Response status:', res.status, 'OK:', res.ok);
       console.log('[Save Product Details] Response data:', data);
       console.log('[Save Product Details] Response stock:', data.stock);
+      console.log('[Save Product Details] Response originalPrice/MRP:', data.originalPrice);
       
       if (!res.ok) {
         console.error('[Save Product Details] API error:', data.message);
