@@ -191,7 +191,7 @@ interface ProductEditorDraft {
   price: number;
   originalPrice: number;
   imagesText: string;
-  categoriesText: string;
+  category: string;
   description: string;
   featuresText: string;
   sku: string;
@@ -202,6 +202,12 @@ interface ProductEditorDraft {
   numReviews: number;
   inStock: boolean;
   stock: number;
+}
+
+interface CategoryOption {
+  _id: string;
+  name: string;
+  slug: string;
 }
 
 export default function AdminPanelPage() {
@@ -221,6 +227,9 @@ export default function AdminPanelPage() {
   const [customCourierDraft, setCustomCourierDraft] = useState('');
   const [awbDraft, setAwbDraft] = useState('');
   const [trackingUrlDraft, setTrackingUrlDraft] = useState('');
+  const [availableCategories, setAvailableCategories] = useState<CategoryOption[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [categoriesError, setCategoriesError] = useState('');
 
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -892,8 +901,25 @@ export default function AdminPanelPage() {
       setProductModalMode(mode);
       if (mode === 'edit') {
         setProductDraft(buildProductDraft(data));
+        
+        // Fetch categories when entering edit mode
+        setLoadingCategories(true);
+        setCategoriesError('');
+        try {
+          const categoriesRes = await fetch('/api/categories', { credentials: 'include' });
+          if (!categoriesRes.ok) throw new Error('Failed to fetch categories');
+          const categoriesData = await categoriesRes.json();
+          setAvailableCategories(Array.isArray(categoriesData) ? categoriesData : []);
+        } catch (err: any) {
+          setCategoriesError('Failed to load categories. Please try again.');
+          console.error('Category fetch error:', err);
+        } finally {
+          setLoadingCategories(false);
+        }
       } else {
         setProductDraft(null);
+        setAvailableCategories([]);
+        setCategoriesError('');
       }
     } catch (err: any) {
       setMessage(err.message || 'Failed to open product details');
@@ -905,6 +931,8 @@ export default function AdminPanelPage() {
     setProductModalMode(null);
     setProductDraft(null);
     setSavingProductDetails(false);
+    setAvailableCategories([]);
+    setCategoriesError('');
   };
 
   const saveDetailedProduct = async () => {
@@ -1982,7 +2010,24 @@ export default function AdminPanelPage() {
                     <h4 className="mb-3 font-semibold text-brand-text">Catalog Details</h4>
                     {productModalMode === 'edit' && productDraft ? (
                       <div className="space-y-3">
-                        <input value={productDraft.categoriesText} onChange={(e) => setProductDraft({ ...productDraft, categoriesText: e.target.value })} className="w-full rounded-lg border border-brand-border px-3 py-2" placeholder="Categories (comma separated)" />
+                        {loadingCategories ? (
+                          <div className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm text-gray-500">
+                            Loading categories...
+                          </div>
+                        ) : categoriesError ? (
+                          <div className="w-full rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-600">
+                            {categoriesError}
+                          </div>
+                        ) : (
+                          <select value={productDraft.category} onChange={(e) => setProductDraft({ ...productDraft, category: e.target.value })} className="w-full rounded-lg border border-brand-border px-3 py-2">
+                            <option value="">Select a category</option>
+                            {availableCategories.map((cat) => (
+                              <option key={cat._id} value={cat.slug}>
+                                {cat.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                         <input value={productDraft.featuresText} onChange={(e) => setProductDraft({ ...productDraft, featuresText: e.target.value })} className="w-full rounded-lg border border-brand-border px-3 py-2" placeholder="Features (comma separated)" />
                         <input value={productDraft.sku} onChange={(e) => setProductDraft({ ...productDraft, sku: e.target.value })} className="w-full rounded-lg border border-brand-border px-3 py-2" placeholder="SKU" />
                         <input value={productDraft.material} onChange={(e) => setProductDraft({ ...productDraft, material: e.target.value })} className="w-full rounded-lg border border-brand-border px-3 py-2" placeholder="Material" />
@@ -2296,7 +2341,7 @@ function buildProductDraft(product: Product): ProductEditorDraft {
     price: Number(product.price) || 0,
     originalPrice: Number(product.originalPrice) || 0,
     imagesText: (product.images || []).join('\n'),
-    categoriesText: (product.categories || []).join(', '),
+    category: (product.categories && product.categories[0]) || '',
     description: product.description || '',
     featuresText: (product.features || []).join(', '),
     sku: product.specs?.sku || '',
@@ -2319,10 +2364,7 @@ function buildProductPayload(draft: ProductEditorDraft) {
     .map((line) => line.trim())
     .filter(Boolean);
 
-  const categories = draft.categoriesText
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
+  const categories = draft.category ? [draft.category] : ['accessories'];
 
   const features = draft.featuresText
     .split(',')
@@ -2345,7 +2387,7 @@ function buildProductPayload(draft: ProductEditorDraft) {
     price: Number(draft.price) || 0,
     originalPrice: Number(draft.originalPrice) > 0 ? Number(draft.originalPrice) : Number(draft.price) || 0,
     images: images.length > 0 ? images : ['/file.svg'],
-    categories: categories.length > 0 ? categories : ['accessories'],
+    categories,
     description: draft.description.trim(),
     features,
     specs: {
