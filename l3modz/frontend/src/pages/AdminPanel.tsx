@@ -957,17 +957,50 @@ export default function AdminPanelPage() {
       });
 
       const data = await res.json();
+      console.log('[Save Product Details] Response status:', res.status, 'OK:', res.ok);
+      console.log('[Save Product Details] Response data:', data);
       console.log('[Save Product Details] Response stock:', data.stock);
       
-      if (!res.ok) throw new Error(data.message || 'Failed to update product');
+      if (!res.ok) {
+        console.error('[Save Product Details] API error:', data.message);
+        throw new Error(data.message || 'Failed to update product');
+      }
 
+      console.log('[Save Product Details] Before state update - selectedProduct._id:', selectedProduct._id);
+      console.log('[Save Product Details] Response data._id:', data._id);
+      
+      // Update products list
       setProducts((prev) => prev.map((p) => (p._id === selectedProduct._id ? data : p)));
+      
+      // Update selected product with fresh data
       setSelectedProduct(data);
-      setProductDraft(buildProductDraft(data));
+      
+      console.log('[Save Product Details] Updated selectedProduct');
+      console.log('[Save Product Details] Updated data:', {
+        title: data.title,
+        price: data.price,
+        stock: data.stock,
+        category: data.categories?.[0],
+        material: data.specs?.material,
+      });
+      
+      // Clear productDraft to force fresh state
+      setProductDraft(null);
+      
+      console.log('[Save Product Details] Cleared productDraft');
+      console.log('[Save Product Details] Setting mode to view');
+      
+      // Set mode to view - this will show the updated selectedProduct data
       setProductModalMode('view');
       setEditingProductId('');
+      
+      // Small delay to ensure state updates are processed
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      console.log('[Save Product Details] State updated, mode is now view');
       setMessage('Product updated successfully.');
     } catch (err: any) {
+      console.error('[Save Product Details] Error:', err);
       setMessage(err.message || 'Failed to update product');
     } finally {
       setSavingProductDetails(false);
@@ -1099,6 +1132,13 @@ export default function AdminPanelPage() {
 
   const closeUserDetails = () => {
     setSelectedUser(null);
+  };
+
+  const closeProductDetails = () => {
+    setSelectedProduct(null);
+    setProductModalMode(null);
+    setProductDraft(null);
+    setEditingProductId('');
   };
 
   const filteredProducts = useMemo(() => {
