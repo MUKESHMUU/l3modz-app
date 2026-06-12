@@ -504,6 +504,10 @@ export default function AdminPanelPage() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to update product');
+      
+      // Update the local products list with the returned data
+      setProducts((prev) => prev.map((p) => (p._id === product._id ? data : p)));
+      
       setMessage('Product updated successfully.');
       setEditingProductId('');
     } catch (err: any) {
@@ -942,6 +946,9 @@ export default function AdminPanelPage() {
 
     try {
       const payload = buildProductPayload(productDraft);
+      console.log('[Save Product Details] Payload:', payload);
+      console.log('[Save Product Details] Stock in payload:', payload.stock);
+      
       const res = await fetch(`/api/products/${selectedProduct._id}`, {
         method: 'PUT',
         credentials: 'include',
@@ -950,6 +957,8 @@ export default function AdminPanelPage() {
       });
 
       const data = await res.json();
+      console.log('[Save Product Details] Response stock:', data.stock);
+      
       if (!res.ok) throw new Error(data.message || 'Failed to update product');
 
       setProducts((prev) => prev.map((p) => (p._id === selectedProduct._id ? data : p)));
