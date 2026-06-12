@@ -35,10 +35,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const id = (await params).id;
     const body = await req.json();
     
-    // Explicitly log incoming stock value for debugging
-    console.log('[Products PUT] Incoming stock:', body?.stock, 'Type:', typeof body?.stock);
-     // Explicitly log incoming originalPrice value for debugging
-    console.log('[Products PUT] Incoming originalPrice:', body?.originalPrice, 'Type:', typeof body?.originalPrice);
+    // === STEP 1: LOG INCOMING REQUEST ===
+    console.log('');
+    console.log('╔═══════════════════════════════════════');
+    console.log('║ BACKEND STEP 1: INCOMING REQUEST');
+    console.log('╚═══════════════════════════════════════');
+    console.log('Full request body:', JSON.stringify(body, null, 2));
+    console.log('body.originalPrice (MRP):', body?.originalPrice, 'Type:', typeof body?.originalPrice);
+    console.log('body.price (Selling):', body?.price, 'Type:', typeof body?.price);
+    console.log('body.stock:', body?.stock, 'Type:', typeof body?.stock);
     
     const rawStock = body?.stock;
     const stockValue = rawStock === undefined || rawStock === null || rawStock === '' ? 0 : Number(rawStock);
@@ -51,6 +56,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     
     console.log('[Products PUT] Calculated stock:', stock, 'inStock:', inStock);
 
+    // === STEP 2: BUILD UPDATE PAYLOAD ===
+    console.log('');
+    console.log('╔═══════════════════════════════════════');
+    console.log('║ BACKEND STEP 2: UPDATE PAYLOAD');
+    console.log('╚═══════════════════════════════════════');
+    
     // Prepare the update payload - be explicit about all fields
     const updatePayload = {
       title: body.title,
@@ -69,13 +80,26 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       stock,
     };
     
-    console.log('[Products PUT] Update payload keys:', Object.keys(updatePayload));
-    console.log('[Products PUT] Stock in payload:', updatePayload.stock);
-    console.log('[Products PUT] originalPrice in payload:', updatePayload.originalPrice);
+    console.log('Update payload:', JSON.stringify(updatePayload, null, 2));
+    console.log('updatePayload.originalPrice:', updatePayload.originalPrice);
+    console.log('updatePayload.price:', updatePayload.price);
     
-    // Log before update
+    // === STEP 3: CHECK EXISTING PRODUCT ===
+    console.log('');
+    console.log('╔═══════════════════════════════════════');
+    console.log('║ BACKEND STEP 3: EXISTING PRODUCT');
+    console.log('╚═══════════════════════════════════════');
+    
     const existingProduct = await Product.findById(id);
-    console.log('[Products PUT] Before update - existing stock:', existingProduct?.stock);
+    console.log('Existing product originalPrice:', existingProduct?.originalPrice);
+    console.log('Existing product price:', existingProduct?.price);
+    console.log('Existing product stock:', existingProduct?.stock);
+    
+    // === STEP 4: PERFORM UPDATE ===
+    console.log('');
+    console.log('╔═══════════════════════════════════════');
+    console.log('║ BACKEND STEP 4: MONGODB UPDATE');
+    console.log('╚═══════════════════════════════════════');
     
     const product = await Product.findByIdAndUpdate(id, updatePayload, { new: true, runValidators: true });
     if (!product) {
@@ -83,9 +107,21 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ message: 'Product not found' }, { status: 404 });
     }
     
-    console.log('[Products PUT] After update - returned stock:', product.stock);
-    console.log('[Products PUT] After update - returned originalPrice:', product.originalPrice);
-    console.log('[Products PUT] Full updated product:', { title: product.title, price: product.price, originalPrice: product.originalPrice, stock: product.stock });
+    // === STEP 5: VERIFY UPDATE IN DATABASE ===
+    console.log('');
+    console.log('╔═══════════════════════════════════════');
+    console.log('║ BACKEND STEP 5: AFTER UPDATE');
+    console.log('╚═══════════════════════════════════════');
+    console.log('Updated product originalPrice:', product.originalPrice);
+    console.log('Updated product price:', product.price);
+    console.log('Updated product stock:', product.stock);
+    console.log('Full updated product:', JSON.stringify({ 
+      _id: product._id, 
+      title: product.title, 
+      price: product.price, 
+      originalPrice: product.originalPrice, 
+      stock: product.stock 
+    }, null, 2));
 
     return NextResponse.json(product);
   } catch (error: any) {
