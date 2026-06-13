@@ -1189,11 +1189,12 @@ export default function AdminPanelPage() {
       const matchesSearch =
         !q ||
         o._id.toLowerCase().includes(q) ||
+        o._id.slice(-8).toLowerCase().includes(q) ||
         (o.user?.name || '').toLowerCase().includes(q) ||
         (o.user?.email || '').toLowerCase().includes(q) ||
+        (o.guestInfo?.name || '').toLowerCase().includes(q) ||
         (o.guestInfo?.email || '').toLowerCase().includes(q) ||
-        (o.guestInfo?.phone || '').includes(q) ||
-        (o.guestInfo?.name || '').toLowerCase().includes(q);
+        (o.guestInfo?.phone || '').includes(q);
       const matchesStatus = orderStatusFilter === 'all' || (o.status || 'Pending') === orderStatusFilter;
       return matchesSearch && matchesStatus;
     });
@@ -1867,9 +1868,22 @@ export default function AdminPanelPage() {
               <div className="rounded-2xl border border-brand-border bg-white p-4">
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <input
-                    placeholder="Search by Order ID, name, email, or phone"
+                    placeholder="Search by Order ID, email, or phone number"
                     value={orderSearch}
-                    onChange={(e) => setOrderSearch(e.target.value)}
+                    onChange={(e) => {
+                      setOrderSearch(e.target.value);
+                      const val = e.target.value.trim();
+                      // MongoDB ObjectId is 24 hex characters
+                      if (val.length === 24 && /^[a-f0-9]{24}$/i.test(val)) {
+                        const match = orders.find((o) => o._id === val);
+                        if (match) openOrderDetails(match);
+                      }
+                      // Also match on last-8 suffix shown in the table
+                      if (val.length === 8) {
+                        const match = orders.find((o) => o._id.slice(-8).toLowerCase() === val.toLowerCase());
+                        if (match) openOrderDetails(match);
+                      }
+                    }}
                     className="rounded-lg border border-brand-border px-3 py-2"
                   />
                   <select
@@ -1884,6 +1898,18 @@ export default function AdminPanelPage() {
                   </select>
                 </div>
               </div>
+
+              {orderSearch.trim() && filteredOrders.length > 0 && (
+                <p className="text-sm text-gray-600 px-1">
+                  {filteredOrders.length} order{filteredOrders.length > 1 ? 's' : ''} found
+                  {filteredOrders.length > 1 ? ' — showing full order history' : ''}
+                </p>
+              )}
+              {orderSearch.trim() && filteredOrders.length === 0 && (
+                <p className="text-sm text-red-500 px-1">
+                  No orders found for this search.
+                </p>
+              )}
 
               <div className="overflow-x-auto rounded-2xl border border-brand-border bg-white">
                 <table className="min-w-full text-sm">
