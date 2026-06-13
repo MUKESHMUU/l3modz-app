@@ -965,9 +965,8 @@ export default function AdminPanelPage() {
       console.log('payload.originalPrice:', payload.originalPrice);
       console.log('payload.price:', payload.price);
       
-      const res = await fetch(`/api/products/${selectedProduct._id}`, {
+      const res = await apiFetch(`/api/products/${selectedProduct._id}`, {
         method: 'PUT',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
