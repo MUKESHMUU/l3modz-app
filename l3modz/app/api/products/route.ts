@@ -19,28 +19,42 @@ export async function GET(req: Request) {
     const year  = searchParams.get('year');
 
     let filter: Record<string, any> = {};
+    const filterClauses: Record<string, any>[] = [];
 
     if (category) {
       const cat = await Category.findOne({ slug: category }).lean();
       if (!cat) {
         return NextResponse.json([]);
       }
-      filter.categoryId = cat._id;
+      filterClauses.push({
+        $or: [
+          { categoryId: cat._id },
+          { categories: cat.slug },
+        ],
+      });
     }
 
     if (search) {
-      filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-      ];
+      filterClauses.push({
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+        ],
+      });
     }
 
     if (brand || model || year) {
-      const compatFilter: any = {};
+      const compatFilter: Record<string, any> = {};
       if (brand) compatFilter['compatibility.brand'] = { $regex: `^${brand}$`, $options: 'i' };
       if (model) compatFilter['compatibility.model'] = { $regex: `^${model}$`, $options: 'i' };
       if (year) compatFilter['compatibility.year'] = year;
-      filter = { ...filter, $and: [compatFilter] };
+      filterClauses.push(compatFilter);
+    }
+
+    if (filterClauses.length === 1) {
+      filter = filterClauses[0];
+    } else if (filterClauses.length > 1) {
+      filter = { $and: filterClauses };
     }
 
     const productsQuery = Product.find(filter)
