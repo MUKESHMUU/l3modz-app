@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('middleware');
 
 const allowedOrigins = new Set([
   'https://www.l3modz.com',
@@ -26,7 +29,7 @@ export function middleware(req: NextRequest) {
   const allowOrigin = getAllowedOrigin(origin);
 
   if (origin && !allowOrigin) {
-    console.warn('[CORS] Blocked origin', {
+    logger.warn('cors_blocked_origin', {
       origin,
       method: req.method,
       path: req.nextUrl.pathname,
@@ -44,7 +47,7 @@ export function middleware(req: NextRequest) {
     headers.set('Access-Control-Allow-Headers', allowedHeaders);
     headers.set('Access-Control-Allow-Credentials', 'true');
     headers.set('Access-Control-Max-Age', '86400');
-    console.info('[CORS] Preflight handled', {
+    logger.info('cors_preflight', {
       origin: origin || '(no-origin)',
       allowOrigin: allowOrigin || '(none)',
       method: req.method,

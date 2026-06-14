@@ -964,29 +964,11 @@ export default function AdminPanelPage() {
     setMessage('');
 
     try {
-      // === STEP 1: BEFORE SAVE ===
-      console.log('');
-      console.log('╔═══════════════════════════════════════');
-      console.log('║ STEP 1: BEFORE SAVE');
-      console.log('╚═══════════════════════════════════════');
-      console.log('Full productDraft:', JSON.stringify(productDraft, null, 2));
-      console.log('productDraft.originalPrice (MRP):', productDraft.originalPrice, typeof productDraft.originalPrice);
-      console.log('productDraft.price (Selling):', productDraft.price, typeof productDraft.price);
-      
       const categoryId = adminCategories.find((cat) => cat._id === productDraft.category)?._id;
       if (!categoryId) {
         throw new Error('Selected category is invalid. Please choose a valid category.');
       }
       const payload = buildProductPayload(productDraft, categoryId);
-      
-      // === STEP 2: AFTER PAYLOAD BUILD ===
-      console.log('');
-      console.log('╔═══════════════════════════════════════');
-      console.log('║ STEP 2: PAYLOAD BUILT');
-      console.log('╚═══════════════════════════════════════');
-      console.log('Full payload:', JSON.stringify(payload, null, 2));
-      console.log('payload.originalPrice:', payload.originalPrice);
-      console.log('payload.price:', payload.price);
       
       const res = await apiFetch(`/api/products/${selectedProduct._id}`, {
         method: 'PUT',
@@ -996,68 +978,23 @@ export default function AdminPanelPage() {
 
       const data = await res.json();
       
-      // === STEP 3: API RESPONSE ===
-      console.log('');
-      console.log('╔═══════════════════════════════════════');
-      console.log('║ STEP 3: SERVER RESPONSE');
-      console.log('╚═══════════════════════════════════════');
-      console.log('HTTP Status:', res.status, 'OK:', res.ok);
-      console.log('Full response:', JSON.stringify(data, null, 2));
-      console.log('data.originalPrice:', data.originalPrice);
-      console.log('data.price:', data.price);
-      
       if (!res.ok) {
-        console.error('[Save Product Details] API error:', data.message);
         throw new Error(data.message || 'Failed to update product');
       }
 
-      // === STEP 4: STATE UPDATE IN REACT ===
-      console.log('');
-      console.log('╔═══════════════════════════════════════');
-      console.log('║ STEP 4: UPDATING REACT STATE');
-      console.log('╚═══════════════════════════════════════');
-      console.log('Before setSelectedProduct - data:', data);
-      console.log('Before setSelectedProduct - data.originalPrice:', data.originalPrice);
-      
       // Update products list
       setProducts((prev) => prev.map((p) => (p._id === selectedProduct._id ? data : p)));
       
       // Update selected product with fresh data
       setSelectedProduct(data);
       
-      console.log('After setSelectedProduct - should now show updated values');
-      console.log('Awaiting React state update...');
-      
       // Clear productDraft to force fresh state
       setProductDraft(null);
-      
-      console.log('Cleared productDraft - view mode will now render from selectedProduct');
       
       // Set mode to view - this will show the updated selectedProduct data
       setProductModalMode('view');
       setEditingProductId('');
       
-      // === STEP 5: VIEW MODAL WILL NOW RENDER ===
-      console.log('');
-      console.log('╔═══════════════════════════════════════');
-      console.log('║ STEP 5: VIEW MODAL RENDERING');
-      console.log('╚═══════════════════════════════════════');
-      console.log('Modal will now use selectedProduct:');
-      console.log('selectedProduct.originalPrice (displayed as MRP):', selectedProduct.originalPrice);
-      console.log('selectedProduct.price (displayed as Selling Price):', selectedProduct.price);
-      console.log('selectedProduct.stock (displayed as Stock):', selectedProduct.stock);
-      console.log('Full selectedProduct:', JSON.stringify({
-        _id: selectedProduct._id,
-        title: selectedProduct.title,
-        price: selectedProduct.price,
-        originalPrice: selectedProduct.originalPrice,
-        stock: selectedProduct.stock,
-      }, null, 2));
-      
-      // Small delay to ensure state updates are processed
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      console.log('[Save Product Details] State updated, mode is now view');
       setMessage('Product updated successfully.');
     } catch (err: any) {
       console.error('[Save Product Details] Error:', err);

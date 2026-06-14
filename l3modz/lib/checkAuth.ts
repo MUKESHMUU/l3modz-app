@@ -2,23 +2,26 @@ import { cookies } from 'next/headers';
 import { verifyToken } from './auth';
 import dbConnect from './mongodb';
 import User from '@/models/User';
+import { createLogger } from './logger';
+
+const logger = createLogger('auth');
 
 export async function getUserFromToken() {
   const cookieStore = await cookies();
   const token = cookieStore.get('token')?.value;
-  console.info('[Auth] token cookie read', { hasToken: Boolean(token), tokenLength: token?.length || 0 });
+  logger.debug('Authentication token read', { hasToken: Boolean(token) });
 
   if (!token) return null;
 
   const decoded: any = verifyToken(token);
   if (!decoded) {
-    console.info('[Auth] token verification failed');
+    logger.debug('Token verification failed');
     return null;
   }
 
   await dbConnect();
   const user = await User.findById(decoded.id).select('-password');
-  console.info('[Auth] token resolved user', { hasUser: Boolean(user), role: user?.role || null });
+  logger.debug('User lookup completed', { found: Boolean(user) });
   return user;
 }
 

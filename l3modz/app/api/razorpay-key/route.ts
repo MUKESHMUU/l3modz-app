@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getEnvValue, validateProductionEnv } from '@/lib/env';
+import { createLogger } from '@/lib/logger';
 
+const logger = createLogger('razorpay-key');
 const allowedOrigins = (process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || '').split(',').map(s => s.trim()).filter(Boolean);
 
 export async function OPTIONS() {
@@ -23,7 +25,7 @@ export async function GET() {
     headers.set('Access-Control-Allow-Credentials', 'true');
 
     const key = getEnvValue('RAZORPAY_KEY_ID') || getEnvValue('NEXT_PUBLIC_RAZORPAY_KEY_ID');
-    console.info('[API] /api/razorpay-key called. key present:', Boolean(key));
+    logger.debug('razorpay_key_requested', { keyPresent: Boolean(key) });
 
     if (!key) {
       return NextResponse.json({ message: 'Razorpay is not configured' }, { status: 503, headers });
@@ -31,7 +33,7 @@ export async function GET() {
 
     return NextResponse.json({ key }, { status: 200, headers });
   } catch (error: any) {
-    console.error('[API] /api/razorpay-key error:', error);
+    logger.error('razorpay_key_error', { error: error.message || String(error) });
     return NextResponse.json({ message: 'Failed to load Razorpay configuration' }, { status: 500 });
   }
 }

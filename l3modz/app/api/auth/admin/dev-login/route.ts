@@ -4,12 +4,16 @@ import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import { getAuthCookieOptions, signToken } from '@/lib/auth';
 
-const ADMIN_PHONE = process.env.ADMIN_LOGIN_PHONE || '7708969064';
+const ADMIN_PHONE = process.env.ADMIN_LOGIN_PHONE;
 
 export async function POST() {
   try {
     if (process.env.NODE_ENV === 'production') {
       return NextResponse.json({ message: 'Direct login is disabled in production.' }, { status: 403 });
+    }
+
+    if (!ADMIN_PHONE) {
+      return NextResponse.json({ message: 'Admin login phone is not configured for development access.' }, { status: 500 });
     }
 
     await dbConnect();

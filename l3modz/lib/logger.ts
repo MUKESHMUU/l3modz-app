@@ -1,6 +1,7 @@
 type LogMeta = Record<string, unknown>;
 
 const REDACTED_KEYS = /password|secret|token|signature|authorization|cookie|email|phone/i;
+const IS_DEVELOPMENT = process.env.NODE_ENV !== 'production';
 
 function sanitizeValue(value: unknown): unknown {
   if (value === null || typeof value === 'undefined') return value;
@@ -17,7 +18,9 @@ function sanitizeValue(value: unknown): unknown {
   return String(value);
 }
 
-function write(scope: string, level: 'info' | 'warn' | 'error', event: string, meta?: LogMeta) {
+function write(scope: string, level: 'debug' | 'info' | 'warn' | 'error', event: string, meta?: LogMeta) {
+  if (level === 'debug' && !IS_DEVELOPMENT) return;
+
   const sanitizedMeta = (meta ? sanitizeValue(meta) : {}) as Record<string, unknown>;
   const payload = {
     scope,
@@ -26,6 +29,7 @@ function write(scope: string, level: 'info' | 'warn' | 'error', event: string, m
     timestamp: new Date().toISOString(),
   };
   const message = `[${scope}] ${event}`;
+
   if (level === 'error') {
     console.error(message, payload);
     return;
@@ -34,11 +38,18 @@ function write(scope: string, level: 'info' | 'warn' | 'error', event: string, m
     console.warn(message, payload);
     return;
   }
-  console.info(message, payload);
+  if (level === 'info') {
+    console.info(message, payload);
+    return;
+  }
+  console.debug(message, payload);
 }
 
 export function createLogger(scope: string) {
   return {
+    debug(event: string, meta?: LogMeta) {
+      write(scope, 'debug', event, meta);
+    },
     info(event: string, meta?: LogMeta) {
       write(scope, 'info', event, meta);
     },

@@ -1,9 +1,12 @@
 import mongoose from 'mongoose';
-import { validateProductionEnv, requireEnv } from './env';
+import { requireEnv } from './env';
+import { createLogger } from './logger';
 
-validateProductionEnv();
+const logger = createLogger('mongodb');
 
-const MONGODB_URI = requireEnv('MONGODB_URI');
+function getMongoUri() {
+  return requireEnv('MONGODB_URI');
+}
 
 let cached = (global as any).mongoose;
 let shipmentFieldSafetyChecked = false;
@@ -34,12 +37,13 @@ async function dbConnect() {
         : {}),
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      console.log('MongoDB connected successfully');
+    const uri = getMongoUri();
+    cached.promise = mongoose.connect(uri, opts).then((mongoose) => {
+      logger.info('mongodb_connected');
       return mongoose;
     });
   }
-  
+
   try {
     cached.conn = await cached.promise;
   } catch (e) {
@@ -68,17 +72,17 @@ async function dbConnect() {
       });
 
       if (missingCount > 0) {
-        console.warn('[MongoDB] Shipment migration safety check found orders missing new shipment fields', {
+        logger.warn('shipment_migration_fields_missing', {
           missingCount,
           checkedAt: new Date().toISOString(),
         });
       } else {
-        console.info('[MongoDB] Shipment migration safety check passed', {
+        logger.info('shipment_migration_fields_ok', {
           checkedAt: new Date().toISOString(),
         });
       }
     } catch (error: any) {
-      console.warn('[MongoDB] Shipment migration safety check skipped', {
+      logger.warn('shipment_migration_check_skipped', {
         message: error?.message || String(error),
       });
     }

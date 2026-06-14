@@ -4,6 +4,9 @@ import Order from '@/models/Order';
 import { checkAdmin, getUserFromToken } from '@/lib/checkAuth';
 import { refreshTracking, syncOrderToShiprocket } from '@/lib/orderFulfillment';
 import { sendOrderShipmentNotifications } from '@/lib/notifications';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('orders-id');
 
 const ORDER_STATUSES = ['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'] as const;
 type OrderStatus = (typeof ORDER_STATUSES)[number];
@@ -57,7 +60,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       trackingUrl,
     } = body;
 
-    console.info('[orders.put] body', {
+    logger.debug('order_update_request', {
       id,
       status,
       deliveryPartner,
@@ -160,7 +163,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       await order.save();
     }
 
-    console.info('[orders.put] updatedOrder', {
+    logger.info('order_updated', {
       id: String(order._id),
       status: order.status,
       deliveryPartner: order.deliveryPartner,

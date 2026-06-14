@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Order from '@/models/Order';
-import razorpay from '@/lib/razorpay';
+import { getRazorpayClient } from '@/lib/razorpay';
 import { getUserFromToken } from '@/lib/checkAuth';
 import { checkPincodeServiceability } from '@/lib/shiprocket';
 import { refreshTracking, shouldAutoRefreshTracking } from '@/lib/orderFulfillment';
 import { sendOrderBillNotifications } from '@/lib/notifications';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('orders');
 
 export async function GET() {
   try {
@@ -74,10 +77,9 @@ export async function POST(req: Request) {
 
     const razorpayConfigured = Boolean(
       process.env.RAZORPAY_KEY_ID &&
-      (process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_SECRET) &&
-      process.env.RAZORPAY_KEY_ID !== 'dummy_key'
+      (process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_SECRET)
     );
-    console.info('[Orders API] Razorpay configured:', razorpayConfigured);
+    logger.debug('razorpay_configuration_status', { configured: razorpayConfigured });
 
     if (!razorpayConfigured) {
       return NextResponse.json({ message: 'Razorpay is not configured yet. Add valid Razorpay keys to continue.' }, { status: 400 });
@@ -115,7 +117,10 @@ export async function POST(req: Request) {
       await sendOrderBillNotifications(order as any);
     } catch (notificationError) {
       // Log notification error but don't fail the order creation
-      console.error('[Order Creation] Failed to send bill notification:', notificationError);
+      logger.error('order_bill_notification_failed', {
+        orderId: order._id?.toString(),
+        error: notificationError instanceof Error ? notificationError.message : String(notificationError),
+      });
     }
 
     const options = {
@@ -124,8 +129,11 @@ export async function POST(req: Request) {
       receipt: order._id.toString(),
     };
 
-    const rzpOrder = await razorpay.orders.create(options);
-    console.info('[Orders API] Created Razorpay order id:', rzpOrder.id);
+    const rzpOrder = await getRazorpayClient().orders.create(options);
+    logger.info('razorpay_order_created', {
+      orderId: order._id?.toString(),
+      razorpayOrderId: rzpOrder.id,
+    });
 
     order.paymentResult = {
       razorpay_order_id: rzpOrder.id,

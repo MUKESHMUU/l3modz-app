@@ -10,7 +10,7 @@ export default function CheckoutPage() {
   const navigate = useNavigate();
   const buyNowItem = getBuyNowItem();
   const checkoutItems = buyNowItem ? [buyNowItem] : items;
-  const [razorpayConfigured, setRazorpayConfigured] = useState<boolean>(Boolean(import.meta.env.VITE_RAZORPAY_KEY_ID && import.meta.env.VITE_RAZORPAY_KEY_ID !== 'dummy_key'));
+  const [razorpayConfigured, setRazorpayConfigured] = useState<boolean>(Boolean(import.meta.env.VITE_RAZORPAY_KEY_ID));
 
   // At runtime, prefer fetching the public key from backend so production builds don't rely on local .env
   useEffect(() => {
@@ -20,13 +20,11 @@ export default function CheckoutPage() {
         // Use apiFetch which respects VITE_API_URL when configured
         const res = await apiFetch('/api/razorpay-key');
         if (!res.ok) {
-          console.warn('[Checkout] /api/razorpay-key returned', res.status);
           return;
         }
         const data = await res.json();
         if (mounted && data?.key) setRazorpayConfigured(true);
-      } catch (err) {
-        console.warn('[Checkout] /api/razorpay-key fetch failed', err);
+      } catch {
       }
     };
     checkKey();
@@ -139,7 +137,10 @@ export default function CheckoutPage() {
       // Fetch public key from backend for robust production behavior
       const keyRes = await apiFetch('/api/razorpay-key');
       const keyJson = await keyRes.json();
-      const publicKey = keyJson?.key || import.meta.env.VITE_RAZORPAY_KEY_ID || 'dummy_key';
+      const publicKey = keyJson?.key || import.meta.env.VITE_RAZORPAY_KEY_ID;
+      if (!publicKey) {
+        throw new Error('Razorpay public key is missing. Please contact support.');
+      }
 
       const options = {
         key: publicKey,

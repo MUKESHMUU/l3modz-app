@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { checkPincodeServiceability } from '@/lib/shiprocket';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('shipping-serviceability');
 
 export async function POST(req: Request) {
   try {
@@ -16,10 +19,11 @@ export async function POST(req: Request) {
       weightKg: Number(body?.weightKg || process.env.SHIPROCKET_DEFAULT_WEIGHT_KG || 0.5),
     });
 
-    console.info('[API] /api/shipping/serviceability checked', { pincode, serviceable: result.serviceable, message: result.message });
+    logger.debug('Serviceability checked', { serviceable: result.serviceable });
 
     return NextResponse.json(result);
   } catch (error: any) {
+    logger.error('Serviceability route error', { message: error.message });
     return NextResponse.json({ message: error.message || 'Failed to check pincode serviceability' }, { status: 500 });
   }
 }

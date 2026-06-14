@@ -1,4 +1,5 @@
 import type { IOrder } from '@/models/Order';
+import { createLogger } from './logger';
 
 type ShiprocketAuthResponse = {
   token: string;
@@ -60,13 +61,10 @@ type EnvInspection = {
   hasControlWhitespace: boolean;
 };
 
+const shiprocketLogger = createLogger('shiprocket');
+
 function debugLog(message: string, details?: unknown) {
-  if (!SHIPROCKET_DEBUG_ENABLED) return;
-  if (typeof details === 'undefined') {
-    console.log('[Shiprocket]', message);
-    return;
-  }
-  console.log('[Shiprocket]', message, details);
+  shiprocketLogger.debug(message, details ? { details } : undefined);
 }
 
 function normalizeEnvValue(value: string | undefined | null) {
@@ -247,10 +245,7 @@ async function authenticateShiprocket(force = false): Promise<string> {
 
   if (tokenRefreshPromise) {
     // Queue concurrent requests behind the in-flight refresh to avoid race conditions.
-    console.info('[Shiprocket] Token refresh already in progress, waiting', {
-      endpoint: authEndpoint,
-      timestamp: new Date().toISOString(),
-    });
+    shiprocketLogger.debug('Token refresh already in progress');
     return tokenRefreshPromise;
   }
 
@@ -302,12 +297,10 @@ async function authenticateShiprocket(force = false): Promise<string> {
         });
 
         lastAuthStatus = res.status;
-        console.info('[Shiprocket] Auth response', {
-          endpoint: authEndpoint,
+        shiprocketLogger.debug('Authentication response received', {
           status: res.status,
           ok: res.ok,
           attempt,
-          timestamp: new Date().toISOString(),
         });
 
         if (!res.ok) {
@@ -320,12 +313,9 @@ async function authenticateShiprocket(force = false): Promise<string> {
                 ? 'Shiprocket authentication service is unavailable.'
                 : `Shiprocket authentication failed with status ${res.status}`;
 
-          console.error('[Shiprocket] Auth failure', {
-            endpoint: authEndpoint,
+          shiprocketLogger.error('Authentication failure', {
             status: res.status,
-            responseBody: errorText,
             attempt,
-            timestamp: new Date().toISOString(),
           });
 
           if (attempt < maxAttempts && res.status >= 500) {
@@ -341,11 +331,7 @@ async function authenticateShiprocket(force = false): Promise<string> {
         if (!data?.token) {
           lastAuthResponseBody = JSON.stringify(data);
           lastAuthError = 'Shiprocket auth token missing in response';
-          console.error('[Shiprocket] Auth response missing token', {
-            endpoint: authEndpoint,
-            responseBody: data,
-            timestamp: new Date().toISOString(),
-          });
+          shiprocketLogger.error('Authentication failed: missing token in response', {});
           throw new Error('Shiprocket auth token missing in response');
         }
 
@@ -353,24 +339,16 @@ async function authenticateShiprocket(force = false): Promise<string> {
         cachedTokenExpiry = now + 8 * 60 * 1000;
         lastAuthSuccessAt = new Date().toISOString();
         debugLog('Shiprocket auth succeeded', {
-          endpoint: authEndpoint,
           tokenCached: true,
-          tokenExpiresAt: new Date(cachedTokenExpiry).toISOString(),
         });
-        console.info('[Shiprocket] Auth succeeded', {
-          endpoint: authEndpoint,
-          tokenExpiresAt: new Date(cachedTokenExpiry).toISOString(),
-          timestamp: new Date().toISOString(),
-        });
+        shiprocketLogger.info('Authentication completed successfully');
         return data.token;
       } catch (error: any) {
         const message = error?.message || String(error);
         lastAuthError = message;
-        console.error('[Shiprocket] Auth exception', {
-          endpoint: authEndpoint,
+        shiprocketLogger.error('Authentication exception', {
           attempt,
           message,
-          timestamp: new Date().toISOString(),
         });
 
         if (attempt < maxAttempts && /network|fetch|timeout|ECONN|ETIMEDOUT/i.test(message)) {
@@ -398,9 +376,8 @@ async function shiprocketRequest<T>(path: string, init: RequestInit = {}, attemp
 
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
-      const startedAt = new Date().toISOString();
-      console.info('[Shiprocket] Request start', { path, method, attempt: attempt + 1, attempts, timestamp: startedAt });
-      debugLog('Shiprocket request start', { path, method, attempt: attempt + 1, attempts, startedAt });
+      shiprocketLogger.debug('Request start', { path, method, attempt: attempt + 1, attempts });
+      debugLog('Shiprocket request start', { path, method, attempt: attempt + 1, attempts });
       const token = await authenticateShiprocket(attempt > 0);
       const res = await fetch(`${SHIPROCKET_BASE}${path}`, {
         ...init,
@@ -411,13 +388,12 @@ async function shiprocketRequest<T>(path: string, init: RequestInit = {}, attemp
         },
         cache: 'no-store',
       });
-      console.info('[Shiprocket] Request response', {
+      shiprocketLogger.debug('Request response', {
         path,
         method,
         status: res.status,
         ok: res.ok,
         attempt: attempt + 1,
-        timestamp: new Date().toISOString(),
       });
 
       if (res.status === 401 && attempt < attempts - 1) {
@@ -429,13 +405,11 @@ async function shiprocketRequest<T>(path: string, init: RequestInit = {}, attemp
 
       if (!res.ok) {
         const body = await res.text();
-        console.error('[Shiprocket] Request failed', {
+        shiprocketLogger.error('Request failed', {
           path,
           method,
           status: res.status,
-          responseBody: body,
           attempt: attempt + 1,
-          timestamp: new Date().toISOString(),
         });
         if (attempt < attempts - 1 && isRetryableShiprocketStatus(res.status)) {
           await sleep(getRetryDelayMs(attempt));
@@ -446,21 +420,19 @@ async function shiprocketRequest<T>(path: string, init: RequestInit = {}, attemp
 
       debugLog('Shiprocket request succeeded', { path, attempt: attempt + 1 });
       const responseText = await res.text();
-      console.info('[Shiprocket] Request body received', {
+      shiprocketLogger.debug('Response body received', {
         path,
         method,
         status: res.status,
-        timestamp: new Date().toISOString(),
       });
       return parseShiprocketResponseBody(responseText) as T;
     } catch (error) {
       lastError = error;
-      console.error('[Shiprocket] Request exception', {
+      shiprocketLogger.error('Request exception', {
         path,
         method,
         attempt: attempt + 1,
         message: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString(),
       });
       if (attempt < attempts - 1) {
         await sleep(getRetryDelayMs(attempt));
@@ -530,7 +502,7 @@ export async function checkPincodeServiceability(params: ServiceabilityParams) {
       message: availableCouriers.length > 0 ? 'Service available' : 'Delivery unavailable for this pincode',
     };
   } catch (error: any) {
-    console.error('[Shiprocket] checkPincodeServiceability failed:', error?.message || error);
+    shiprocketLogger.error('Pincode serviceability check failed', { message: error?.message || String(error) });
     // Return a safe response rather than throwing so callers can show a user-friendly message
     const errorMessage = String(error?.message || error || '');
     const authFailureMessage = describeShiprocketAuthFailure(errorMessage);
@@ -560,13 +532,13 @@ export async function simulateShiprocketConcurrentApiCalls() {
   const startedAt = new Date().toISOString();
   const results = await Promise.allSettled(
     Array.from({ length: 5 }, async (_, index) => {
-      console.info('[Shiprocket] Concurrency test request start', { index: index + 1, timestamp: new Date().toISOString() });
+      shiprocketLogger.debug('Concurrency test request start', { index: index + 1 });
       return shiprocketRequest<any>(`/courier/serviceability/?${query.toString()}`, { method: 'GET' }, 1);
     })
   );
 
   const failures = results.filter((result) => result.status === 'rejected');
-  console.info('[Shiprocket] Concurrency test complete', {
+  shiprocketLogger.debug('Concurrency test complete', {
     startedAt,
     completedAt: new Date().toISOString(),
     total: results.length,

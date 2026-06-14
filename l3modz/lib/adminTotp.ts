@@ -1,7 +1,5 @@
 import crypto from 'crypto';
-import { getEnvValue, validateProductionEnv } from './env';
-
-const DEFAULT_SECRET = 'JBSWY3DPEHPK3PXP';
+import { getEnvValue } from './env';
 
 function normalizeBase32(input: string) {
   return (input || '').replace(/\s+/g, '').toUpperCase();
@@ -43,16 +41,11 @@ function hotp(secret: string, counter: number, digits = 6) {
 }
 
 export function getAdminTotpSecret() {
-  if (process.env.NODE_ENV === 'production') {
-    validateProductionEnv();
-    const configured = getEnvValue('ADMIN_TOTP_SECRET');
-    if (!configured) {
-      throw new Error('ADMIN_TOTP_SECRET is not configured');
-    }
-    return normalizeBase32(configured);
+  const configured = getEnvValue('ADMIN_TOTP_SECRET');
+  if (!configured) {
+    throw new Error('ADMIN_TOTP_SECRET is required');
   }
-
-  return normalizeBase32(getEnvValue('ADMIN_TOTP_SECRET') || DEFAULT_SECRET);
+  return normalizeBase32(configured);
 }
 
 export function verifyAdminTotp(code: string, window = 1) {

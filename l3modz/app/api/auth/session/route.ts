@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('auth-session');
 
 export async function GET() {
   try {
     const { getUserFromToken } = await import('@/lib/checkAuth');
 
     const user = await getUserFromToken();
-    console.info('[Auth] session check', { hasUser: Boolean(user), role: user?.role || null });
+    logger.debug('Auth session checked', { hasUser: Boolean(user) });
 
     if (!user) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });

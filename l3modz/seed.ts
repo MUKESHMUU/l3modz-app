@@ -55,8 +55,10 @@ async function seed() {
 
     console.log("Creating Admin User...");
     const salt = await bcrypt.genSalt(10);
-    // Use environment variable or generate default for seeding only
-    const defaultSeedPassword = process.env.SEED_ADMIN_PASSWORD || 'l3modz@admin2022';
+    const defaultSeedPassword = process.env.SEED_ADMIN_PASSWORD || (process.env.NODE_ENV !== 'production' ? 'l3modz@admin2022' : '');
+    if (!defaultSeedPassword) {
+      throw new Error('SEED_ADMIN_PASSWORD is required in production');
+    }
     const hashedPassword = await bcrypt.hash(defaultSeedPassword, salt);
     
     await User.create({

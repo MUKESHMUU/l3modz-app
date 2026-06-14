@@ -148,7 +148,7 @@ async function sendEmailWithSmtp(payload: NotificationPayload) {
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      console.info('[Notification] SMTP send start', {
+      logger.info('smtp_send_start', {
         attempt,
         recipient,
         subject,
@@ -164,7 +164,7 @@ async function sendEmailWithSmtp(payload: NotificationPayload) {
         attachments,
       });
 
-      console.info('[Notification] SMTP send success', {
+      logger.info('smtp_send_success', {
         attempt,
         messageId: result.messageId,
         recipient,
@@ -174,17 +174,12 @@ async function sendEmailWithSmtp(payload: NotificationPayload) {
       return { success: true, reason: 'sent' as const };
     } catch (error: any) {
       lastError = error?.message || String(error);
-      console.error('[Notification] SMTP send failed', {
-        attempt,
-        recipient,
-        error: lastError,
-        timestamp: new Date().toISOString(),
-      });
       logger.error('smtp_send_failed', {
         attempt,
         recipient,
         subject,
         error: lastError,
+        timestamp: new Date().toISOString(),
       });
       if (attempt < maxAttempts && /network|timeout|ETIMEDOUT|ECONN|rate/i.test(lastError || '')) {
         continue;
@@ -212,7 +207,7 @@ async function postNotification(endpointEnv: string, payload: Record<string, unk
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      console.info('[Notification] Sending payload', {
+      logger.info('notification_send_attempt', {
         endpointEnv,
         attempt,
         timestamp: new Date().toISOString(),
@@ -224,7 +219,7 @@ async function postNotification(endpointEnv: string, payload: Record<string, unk
         body: JSON.stringify(payload),
       });
 
-      console.info('[Notification] Response received', {
+      logger.info('notification_response_received', {
         endpointEnv,
         attempt,
         status: response.status,
@@ -235,7 +230,7 @@ async function postNotification(endpointEnv: string, payload: Record<string, unk
       if (!response.ok) {
         const responseBody = await response.text();
         lastError = `HTTP ${response.status}: ${response.statusText}${responseBody ? ` - ${responseBody}` : ''}`;
-        console.error('[Notification] Send failed', {
+        logger.error('notification_send_failed', {
           endpointEnv,
           attempt,
           status: response.status,
@@ -251,7 +246,7 @@ async function postNotification(endpointEnv: string, payload: Record<string, unk
       return { success: true, reason: 'sent' };
     } catch (error: any) {
       lastError = error?.message || String(error);
-      console.error('[Notification] Send exception', {
+      logger.error('notification_send_exception', {
         endpointEnv,
         attempt,
         error: lastError,
@@ -347,7 +342,7 @@ export async function sendOrderPaidNotifications(order: IOrder) {
   if (whatsappResult.success === false && whatsappResult.reason === 'error') failedServices.push('whatsapp');
 
   if (failedServices.length > 0) {
-    console.error('[Notification] Failed to send notifications for configured services', {
+    logger.error('payment_notifications_failed', {
       orderId: String(order._id),
       failedServices,
       emailResult,
@@ -364,7 +359,7 @@ export async function sendOrderPaidNotifications(order: IOrder) {
   if (whatsappResult.success) sentServices.push('whatsapp');
 
   if (sentServices.length > 0) {
-    console.info('[Notification] Order paid notifications sent successfully', {
+    logger.info('order_paid_notifications_sent', {
       orderId: String(order._id),
       sentServices,
     });
@@ -424,7 +419,7 @@ export async function sendOrderBillNotifications(order: IOrder) {
   if (whatsappResult.success === false && whatsappResult.reason === 'error') failedServices.push('whatsapp');
 
   if (failedServices.length > 0) {
-    console.error('[Notification] Failed to send bill notifications for configured services', {
+    logger.error('bill_notifications_failed', {
       orderId: String(order._id),
       failedServices,
       emailResult,
@@ -441,7 +436,7 @@ export async function sendOrderBillNotifications(order: IOrder) {
   if (whatsappResult.success) sentServices.push('whatsapp');
 
   if (sentServices.length > 0) {
-    console.info('[Notification] Order bill notifications sent successfully', {
+    logger.info('order_bill_notifications_sent', {
       orderId: String(order._id),
       sentServices,
     });
@@ -491,7 +486,7 @@ export async function sendOrderShipmentNotifications(order: IOrder) {
   if (whatsappResult.success === false && whatsappResult.reason === 'error') failedServices.push('whatsapp');
 
   if (failedServices.length > 0) {
-    console.error('[Notification] Failed to send shipment notifications for configured services', {
+    logger.error('shipment_notifications_failed', {
       orderId: String(order._id),
       failedServices,
       emailResult,
@@ -507,7 +502,7 @@ export async function sendOrderShipmentNotifications(order: IOrder) {
   if (whatsappResult.success) sentServices.push('whatsapp');
 
   if (sentServices.length > 0) {
-    console.info('[Notification] Order shipment notifications sent successfully', {
+    logger.info('order_shipment_notifications_sent', {
       orderId: String(order._id),
       sentServices,
     });
