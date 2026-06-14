@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import Product from '@/models/Product';
 import { checkAdmin } from '@/lib/checkAuth';
@@ -10,9 +11,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     
     // Check if ID is a valid ObjectId, otherwise it might be a slug
     const isObjectId = id.match(/^[0-9a-fA-F]{24}$/);
-    const product = isObjectId 
-      ? await Product.findById(id) 
-      : await Product.findOne({ slug: id });
+    const product = isObjectId
+      ? await Product.findById(id).populate('categoryId', 'name slug')
+      : await Product.findOne({ slug: id }).populate('categoryId', 'name slug');
 
     if (!product) {
       return NextResponse.json({ message: 'Product not found' }, { status: 404 });
@@ -63,13 +64,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     console.log('╚═══════════════════════════════════════');
     
     // Prepare the update payload - be explicit about all fields
-    const updatePayload = {
+    const updatePayload: any = {
       title: body.title,
       slug: body.slug,
       price: body.price,
       originalPrice: body.originalPrice,
       images: body.images,
-      categories: body.categories,
       description: body.description,
       features: body.features,
       specs: body.specs,
@@ -79,6 +79,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       inStock,
       stock,
     };
+
+    if (Object.prototype.hasOwnProperty.call(body, 'categoryId')) {
+      if (body.categoryId) {
+        updatePayload.categoryId = new mongoose.Types.ObjectId(body.categoryId);
+      } else {
+        updatePayload.categoryId = null;
+      }
+    }
     
     console.log('Update payload:', JSON.stringify(updatePayload, null, 2));
     console.log('updatePayload.originalPrice:', updatePayload.originalPrice);
@@ -101,7 +109,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     console.log('║ BACKEND STEP 4: MONGODB UPDATE');
     console.log('╚═══════════════════════════════════════');
     
-    const product = await Product.findByIdAndUpdate(id, updatePayload, { new: true, runValidators: true });
+    const product = await Product.findByIdAndUpdate(id, updatePayload, { new: true, runValidators: true })
+      .populate('categoryId', 'name slug');
     if (!product) {
       console.log('[Products PUT] Product not found after update');
       return NextResponse.json({ message: 'Product not found' }, { status: 404 });

@@ -50,6 +50,17 @@ export default function ProductDetails() {
   }
   if (!product) return null;
 
+  const categoryLabel = product.categoryId
+    ? typeof product.categoryId === 'string'
+      ? product.categoryId
+      : product.categoryId.name || product.categoryId.slug || ''
+    : '';
+  const productCategories = categoryLabel
+    ? [categoryLabel]
+    : Array.isArray(product.categories)
+    ? product.categories
+    : [];
+
   const descriptionText = (product.description || 'Premium motorcycle accessory designed for maximum durability and perfect fitment.').trim();
   const descriptionPoints = descriptionText
     .split(/\r?\n/)
@@ -64,7 +75,7 @@ export default function ProductDetails() {
           <div className="flex flex-col space-y-6">
             <div>
               <div className="flex items-center space-x-2 text-sm text-brand-primary font-semibold tracking-wider uppercase mb-2">
-                {product.categories?.map((c: string) => <span key={c}>{c.replace('-', ' ')}</span>)}
+                {productCategories.map((c: string) => <span key={c}>{c.replace('-', ' ')}</span>)}
               </div>
               <h1 className="text-2xl sm:text-3xl md:text-[2rem] lg:text-4xl font-extrabold text-brand-text leading-tight tracking-tight mb-3">
                 {product.title}
@@ -194,7 +205,7 @@ export default function ProductDetails() {
             <div className="flex flex-col space-y-5">
               <div>
                 <div className="flex items-center space-x-2 text-sm text-brand-primary font-semibold tracking-wider uppercase mb-2">
-                  {product.categories?.map((c: string) => <span key={c}>{c.replace('-', ' ')}</span>)}
+                  {productCategories.map((c: string) => <span key={c}>{c.replace('-', ' ')}</span>)}
                 </div>
                 <h1 className="text-2xl sm:text-3xl md:text-[2rem] lg:text-4xl font-extrabold text-brand-text leading-tight tracking-tight mb-3">
                   {product.title}

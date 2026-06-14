@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import Product from '@/models/Product';
+import Category from '@/models/Category';
 import { checkAdmin } from '@/lib/checkAuth';
 
 export async function GET(req: Request) {
@@ -16,27 +18,41 @@ export async function GET(req: Request) {
     const model = searchParams.get('model');
     const year  = searchParams.get('year');
 
-    let query: any = {};
+    let filter: Record<string, any> = {};
 
-    if (category) query.categories = { $in: [category] };
+    if (category) {
+      const cat = await Category.findOne({ slug: category }).lean();
+      if (!cat) {
+        return NextResponse.json([]);
+      }
+      filter.categoryId = cat._id;
+    }
+
     if (search) {
-      query.$or = [
+      filter.$or = [
         { title: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
       ];
     }
 
-    // Filter by bike compatibility
     if (brand || model || year) {
       const compatFilter: any = {};
       if (brand) compatFilter['compatibility.brand'] = { $regex: `^${brand}$`, $options: 'i' };
       if (model) compatFilter['compatibility.model'] = { $regex: `^${model}$`, $options: 'i' };
-      if (year)  compatFilter['compatibility.year']  = year;
-      query = { ...query, $and: [compatFilter] };
+      if (year) compatFilter['compatibility.year'] = year;
+      filter = { ...filter, $and: [compatFilter] };
     }
 
-    const products = await Product.find(query).limit(limit).sort({ createdAt: -1 });
-    return NextResponse.json(products);
+    const productsQuery = Product.find(filter)
+      .populate('categoryId', 'name slug');
+
+    if (limit > 0) {
+      productsQuery.limit(limit);
+    }
+
+    const products = await productsQuery.lean();
+
+    return NextResponse.json(Array.isArray(products) ? products : []);
   } catch (error: any) {
     return NextResponse.json({ message: 'Failed to load products' }, { status: 500 });
   }
@@ -61,12 +77,18 @@ export async function POST(req: Request) {
     const inStock = typeof body?.inStock === 'boolean' ? body.inStock : stock > 0;
     
     // expecting full product payload
+    const categoryId = body?.categoryId && mongoose.Types.ObjectId.isValid(body.categoryId)
+      ? new mongoose.Types.ObjectId(body.categoryId)
+      : null;
+
     const product = await Product.create({
       ...body,
+      categoryId,
       stock,
       inStock,
     });
-    return NextResponse.json(product, { status: 201 });
+    const created = await Product.findById(product._id).populate('categoryId', 'name slug').lean();
+    return NextResponse.json(created, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ message: 'Failed to create product' }, { status: 500 });
   }

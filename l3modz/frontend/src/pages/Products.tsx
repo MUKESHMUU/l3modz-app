@@ -12,31 +12,73 @@ export default function ProductsPage() {
   const year     = searchParams.get('year');
 
   const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(category);
+  const [catLoading, setCatLoading] = useState(true);
+  const [catError, setCatError] = useState<string | null>(null);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState<string | null>(null);
 
   const isBikeFilter = !!(brand || model || year);
 
   useEffect(() => {
-    async function fetchProducts() {
-      setLoading(true);
+    setSelectedCategory(category);
+  }, [category]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const fetchCategories = async (signal?: AbortSignal) => {
       try {
+        setCatLoading(true);
+        const res = await fetch('/api/categories', { signal });
+        const data = await res.json();
+        const list: any[] = Array.isArray(data) ? data : (data.data ?? []);
+        setCategories(list);
+        setSelectedCategory((prev) =>
+          prev && !list.some((c) => c.slug === prev) ? null : prev
+        );
+        setCatError(null);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          setCatError('Could not load categories.');
+        }
+      } finally {
+        setCatLoading(false);
+      }
+    };
+
+    fetchCategories(controller.signal);
+    const interval = window.setInterval(() => fetchCategories(), 30000);
+    return () => { controller.abort(); clearInterval(interval); };
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        setProductsLoading(true);
         const url = new URL('/api/products', window.location.origin);
         if (search)   url.searchParams.append('search',   search);
-        if (category) url.searchParams.append('category', category);
+        if (selectedCategory) url.searchParams.append('category', selectedCategory);
         if (brand)    url.searchParams.append('brand',    brand);
         if (model)    url.searchParams.append('model',    model);
         if (year)     url.searchParams.append('year',     year);
 
-        const res = await fetch(url.toString());
-        if (res.ok) setProducts(await res.json());
-      } catch (err) {
-        console.error(err);
+        const res = await fetch(url.toString(), { signal: controller.signal });
+        const data = await res.json();
+        setProducts(Array.isArray(data) ? data : (data.data ?? []));
+        setProductsError(null);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          setProductsError('Failed to load products.');
+        }
       } finally {
-        setLoading(false);
+        setProductsLoading(false);
       }
-    }
-    fetchProducts();
-  }, [search, category, brand, model, year]);
+    }, 150);
+
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [search, selectedCategory, brand, model, year]);
 
   const clearBikeFilter = () => {
     const next = new URLSearchParams(searchParams);
@@ -54,6 +96,17 @@ export default function ProductsPage() {
     ? category.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
     : 'All Products';
 
+  const handleCategoryClick = (slug: string | null) => {
+    const next = new URLSearchParams(searchParams);
+    if (slug) {
+      next.set('category', slug);
+    } else {
+      next.delete('category');
+    }
+    setSearchParams(next);
+    setSelectedCategory(slug);
+  };
+
   return (
     <div className="flex flex-col lg:flex-row gap-8">
       {/* Sidebar Filters (Desktop) */}
@@ -66,11 +119,36 @@ export default function ProductsPage() {
             <div>
               <h4 className="font-medium text-sm text-gray-500 mb-3 uppercase tracking-wider">Categories</h4>
               <ul className="space-y-2 text-brand-text">
-                <li><Link to="/products" className={!category && !isBikeFilter ? "text-brand-primary font-medium" : "hover:text-brand-primary"}>All Products</Link></li>
-                <li><Link to="/products?category=footrest" className={category === 'footrest' ? "text-brand-primary font-medium" : "hover:text-brand-primary"}>Footrests</Link></li>
-                <li><Link to="/products?category=radiator-guards" className={category === 'radiator-guards' ? "text-brand-primary font-medium" : "hover:text-brand-primary"}>Radiator Guards</Link></li>
-                <li><Link to="/products?category=carriers" className={category === 'carriers' ? "text-brand-primary font-medium" : "hover:text-brand-primary"}>Carriers &amp; Racks</Link></li>
-                <li><Link to="/products?category=accessories" className={category === 'accessories' ? "text-brand-primary font-medium" : "hover:text-brand-primary"}>Accessories</Link></li>
+                {catLoading && [1, 2, 3, 4, 5].map((i) => (
+                  <li key={i}>
+                    <div className="h-4 rounded-full bg-gray-200 animate-pulse" />
+                  </li>
+                ))}
+                {catError && !catLoading && (
+                  <p className="text-sm text-red-500 px-2">{catError} Showing all products.</p>
+                )}
+                {!catLoading && (
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleCategoryClick(null)}
+                      className={selectedCategory === null && !isBikeFilter ? "text-brand-primary font-medium" : "hover:text-brand-primary"}
+                    >
+                      ALL PRODUCTS
+                    </button>
+                  </li>
+                )}
+                {!catLoading && categories.map((catItem) => (
+                  <li key={catItem._id}>
+                    <button
+                      type="button"
+                      onClick={() => handleCategoryClick(catItem.slug)}
+                      className={selectedCategory === catItem.slug ? "text-brand-primary font-medium" : "hover:text-brand-primary"}
+                    >
+                      {catItem.name}
+                    </button>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
@@ -100,24 +178,33 @@ export default function ProductsPage() {
           </div>
         )}
 
-        {loading ? (
-          <div className="py-20 text-center">Loading products...</div>
+        {productsLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+            {Array.from({ length: 8 }).map((_, idx) => (
+              <div key={idx} className="bg-white border border-brand-border rounded-2xl overflow-hidden animate-pulse h-80" />
+            ))}
+          </div>
+        ) : productsError ? (
+          <div className="bg-white border border-brand-border rounded-2xl p-12 text-center flex flex-col items-center">
+            <h3 className="text-xl font-semibold mb-2">Failed to load products.</h3>
+            <p className="text-gray-500">Please try again or select a different category.</p>
+            <button
+              onClick={() => setSelectedCategory(selectedCategory)}
+              className="mt-4 text-brand-primary font-semibold hover:underline text-sm"
+            >
+              Retry
+            </button>
+          </div>
         ) : products.length === 0 ? (
           <div className="bg-white border border-brand-border rounded-2xl p-12 text-center flex flex-col items-center">
-            <h3 className="text-xl font-semibold mb-2">No products found</h3>
-            <p className="text-gray-500">
-              {isBikeFilter
-                ? 'No accessories are listed for this bike yet. Try a different model or browse all products.'
-                : 'Try adjusting your filters or search terms.'}
-            </p>
-            {isBikeFilter && (
-              <button
-                onClick={clearBikeFilter}
-                className="mt-4 text-brand-primary font-semibold hover:underline text-sm"
-              >
-                Clear bike filter →
-              </button>
-            )}
+            <h3 className="text-xl font-semibold mb-2">No products found in this category.</h3>
+            <p className="text-gray-500">Try selecting a different category or clear your filters.</p>
+            <button
+              onClick={() => handleCategoryClick(null)}
+              className="mt-4 text-brand-primary font-semibold hover:underline text-sm"
+            >
+              View All Products
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">

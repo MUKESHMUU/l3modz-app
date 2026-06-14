@@ -11,13 +11,11 @@ type SearchSuggestion = {
   images?: string[];
 };
 
-const productCategories = [
-  { name: 'All Products', path: '/products' },
-  { name: 'FOOTREST', path: '/products?category=footrest' },
-  { name: 'RADIATOR GUARDS', path: '/products?category=radiator-guards' },
-  { name: 'CARRIERS', path: '/products?category=carriers' },
-  { name: 'ACCESSORIES', path: '/products?category=accessories' },
-];
+type CategoryLink = {
+  _id: string;
+  name: string;
+  slug: string;
+};
 
 const mainLinks = [
   { name: 'HOME', path: '/' },
@@ -36,6 +34,9 @@ export default function Header() {
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [categories, setCategories] = useState<{ _id: string; name: string; slug: string }[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { items } = useCart();
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -122,6 +123,33 @@ export default function Header() {
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        const res = await fetch('/api/categories', { signal: controller.signal });
+        if (!res.ok) {
+          throw new Error('Failed to load categories');
+        }
+        const data = await res.json();
+        setCategories(Array.isArray(data) ? data : []);
+        setCategoriesError(null);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          setCategoriesError('Unable to load categories');
+          setCategories([]);
+        }
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
+    return () => controller.abort();
   }, []);
 
   return (
@@ -345,16 +373,26 @@ export default function Header() {
 
             {isProductsOpen && (
               <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-52 bg-white border border-brand-border rounded-xl shadow-lg overflow-hidden z-50">
-                {productCategories.map((cat) => (
+                {categories.length > 0 ? (
+                  categories.map((cat) => (
+                    <Link
+                      key={cat._id}
+                      to={`/products?category=${encodeURIComponent(cat.slug)}`}
+                      onClick={() => setIsProductsOpen(false)}
+                      className="block px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-brand-primary hover:text-white transition-colors uppercase tracking-wide"
+                    >
+                      {cat.name}
+                    </Link>
+                  ))
+                ) : (
                   <Link
-                    key={cat.name}
-                    to={cat.path}
+                    to="/products"
                     onClick={() => setIsProductsOpen(false)}
                     className="block px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-brand-primary hover:text-white transition-colors uppercase tracking-wide"
                   >
-                    {cat.name}
+                    All Products
                   </Link>
-                ))}
+                )}
               </div>
             )}
           </div>
@@ -386,16 +424,30 @@ export default function Header() {
             </button>
             {isMobileProductsOpen && (
               <div className="pl-4 space-y-1 border-l-2 border-brand-primary/30 ml-2">
-                {productCategories.map((cat) => (
+                {categoriesLoading ? (
+                  Array.from({ length: 4 }).map((_, idx) => (
+                    <div key={idx} className="h-10 rounded-md bg-brand-bg animate-pulse" />
+                  ))
+                ) : categories.length > 0 ? (
+                  categories.map((cat) => (
+                    <Link
+                      key={cat._id}
+                      to={`/products?category=${encodeURIComponent(cat.slug)}`}
+                      className="block font-medium text-gray-600 hover:text-brand-primary px-3 py-2 rounded-md hover:bg-gray-50 text-sm uppercase tracking-wide transition"
+                      onClick={() => { setIsMenuOpen(false); setIsMobileProductsOpen(false); }}
+                    >
+                      {cat.name}
+                    </Link>
+                  ))
+                ) : (
                   <Link
-                    key={cat.name}
-                    to={cat.path}
+                    to="/products"
                     className="block font-medium text-gray-600 hover:text-brand-primary px-3 py-2 rounded-md hover:bg-gray-50 text-sm uppercase tracking-wide transition"
                     onClick={() => { setIsMenuOpen(false); setIsMobileProductsOpen(false); }}
                   >
-                    {cat.name}
+                    All Products
                   </Link>
-                ))}
+                )}
               </div>
             )}
 

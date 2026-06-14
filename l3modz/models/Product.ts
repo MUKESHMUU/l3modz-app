@@ -6,7 +6,7 @@ export interface IProduct extends Document {
   price: number;
   originalPrice?: number;
   images: string[];
-  categories: string[];
+  categoryId?: mongoose.Types.ObjectId | string | null;
   description: string;
   features: string[]; // e.g. ["Direct Fit", "CNC Metal", "Weatherproof"]
   specs: {
@@ -32,7 +32,11 @@ const productSchema = new Schema<IProduct>(
     price: { type: Number, required: true },
     originalPrice: { type: Number },
     images: { type: [String], required: true },
-    categories: { type: [String], required: true },
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category',
+      default: null,
+    },
     description: { type: String, required: true },
     features: { type: [String], default: [] },
     specs: {

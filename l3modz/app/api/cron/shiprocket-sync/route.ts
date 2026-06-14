@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
-import Order from '@/models/Order';
+import Order, { IOrder } from '@/models/Order';
 import { refreshTracking, shouldAutoRefreshTracking, shouldRetryShipment, shouldRetryTracking, syncOrderToShiprocket } from '@/lib/orderFulfillment';
 import { sendOrderBillNotifications, sendOrderPaidNotifications, sendOrderShipmentNotifications } from '@/lib/notifications';
 import { createLogger } from '@/lib/logger';
@@ -9,7 +9,7 @@ import { validateProductionEnv } from '@/lib/env';
 
 const logger = createLogger('cron-shiprocket-sync');
 const BATCH_LIMIT = 12;
-const ACTIVE_STATUSES = ['Confirmed', 'Shipped'];
+const ACTIVE_STATUSES: Array<IOrder['status']> = ['Confirmed', 'Shipped'];
 const LOCK_ID = 'shiprocket-sync';
 
 function isAuthorized(req: Request) {

@@ -3,10 +3,12 @@ import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import { hashPassword, signToken } from '@/lib/auth';
 import { cookies } from 'next/headers';
+import { registrationLimiter, getClientIdentifier } from '@/lib/rateLimit';
+import { logRateLimitViolation } from '@/lib/securityLogger';
 
 export async function POST(req: Request) {
   try {
-    await dbConnect();
+    const clientIp = getClientIdentifier(req);
     const body = await req.json();
     const { name, email, phone, password } = body;
 
@@ -14,6 +16,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
     }
 
+    // Rate limit by email and IP combined
+    const rateLimitKey = `${email.toLowerCase()}:${clientIp}`;
+    const rateLimitResult = registrationLimiter.check(rateLimitKey);
+
+    if (!rateLimitResult.allowed) {
+      logRateLimitViolation(rateLimitKey, 'registration', rateLimitResult.resetAt);
+      return NextResponse.json(
+        {
+          message: 'Too many registration attempts. Please try again later.',
+          retryAfter: Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000),
+        },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000)) } }
+      );
+    }
+
+    await dbConnect();
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return NextResponse.json({ message: 'User already exists' }, { status: 400 });
@@ -38,6 +56,8 @@ export async function POST(req: Request) {
       maxAge: 7 * 24 * 60 * 60, // 7 days
       path: '/',
     });
+
+    registrationLimiter.reset(rateLimitKey);
 
     return NextResponse.json({
       message: 'Registered successfully',

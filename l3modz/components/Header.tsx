@@ -1,14 +1,55 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Search, ShoppingCart, Menu, X, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+
+type CategoryLink = {
+  _id: string;
+  name: string;
+  slug: string;
+};
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [categories, setCategories] = useState<CategoryLink[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const router = useRouter();
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        const res = await fetch('/api/categories', { signal: controller.signal });
+        if (!res.ok) throw new Error('Failed to load categories');
+        const data = await res.json();
+        setCategories(Array.isArray(data) ? data : []);
+      } catch {
+        setCategories([]);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
+    return () => controller.abort();
+  }, []);
+
+  const staticCategoryLinks = [
+    { name: 'FOOTREST', path: '/products?category=footrest' },
+    { name: 'RADIATOR GUARDS', path: '/products?category=radiator-guards' },
+    { name: 'CARRIERS', path: '/products?category=carriers' },
+    { name: 'ACCESSORIES', path: '/products?category=accessories' },
+  ];
+
+  const categoryLinks =
+    categories.length > 0
+      ? categories.map((cat) => ({ name: cat.name.toUpperCase(), path: `/products?category=${encodeURIComponent(cat.slug)}` }))
+      : staticCategoryLinks;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,10 +64,7 @@ export default function Header() {
 
   const navLinks = [
     { name: 'HOME', path: '/' },
-    { name: 'FOOTREST', path: '/products?category=footrest' },
-    { name: 'RADIATOR GUARDS', path: '/products?category=radiator-guards' },
-    { name: 'CARRIERS', path: '/products?category=carriers' },
-    { name: 'ACCESSORIES', path: '/products?category=accessories' },
+    ...categoryLinks,
   ];
 
   return (
@@ -135,7 +173,7 @@ export default function Header() {
       {/* Desktop Navigation Below Header */}
       <nav className="hidden md:block bg-brand-bg border-b border-brand-border py-2 text-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-center space-x-8">
-          {navLinks.map((link) => (
+          {categoryLinks.map((link) => (
             <Link key={link.name} href={link.path} className="font-semibold text-gray-700 hover:text-brand-primary uppercase tracking-wide">
               {link.name}
             </Link>

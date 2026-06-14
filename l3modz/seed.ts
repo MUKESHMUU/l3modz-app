@@ -10,12 +10,20 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
 });
 
+const categorySchema = new mongoose.Schema({
+  name: { type: String, required: true, unique: true },
+  slug: { type: String, required: true, unique: true },
+  image: { type: String },
+  description: { type: String },
+}, { timestamps: true });
+
 const productSchema = new mongoose.Schema({
   title: String,
   slug: { type: String, unique: true },
   price: Number,
   originalPrice: Number,
   images: [String],
+  categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
   categories: [String],
   description: String,
   features: [String],
@@ -47,7 +55,9 @@ async function seed() {
 
     console.log("Creating Admin User...");
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash('l3modz@admin2022', salt);
+    // Use environment variable or generate default for seeding only
+    const defaultSeedPassword = process.env.SEED_ADMIN_PASSWORD || 'l3modz@admin2022';
+    const hashedPassword = await bcrypt.hash(defaultSeedPassword, salt);
     
     await User.create({
       name: 'Super Admin',
@@ -56,9 +66,21 @@ async function seed() {
       password: hashedPassword,
       role: 'admin'
     });
-    console.log("✅ Admin created (Email: admin@l3modz.com | Password: l3modz@admin2022)");
+    console.log("✅ Admin created. Use configured ADMIN_EMAIL and ADMIN_PASSWORD to login.");
 
     console.log("Adding dummy products...");
+    const Category = mongoose.models.Category || mongoose.model('Category', categorySchema);
+    await Category.deleteMany({});
+
+    const defaultCategories = [
+      { name: 'Footrests', slug: 'footrest', image: '/footrest-l321.png', description: 'Premium footrests and riding pegs.' },
+      { name: 'Radiator Guards', slug: 'radiator-guards', image: '/radiator-guard-l3.png', description: 'Radiator and engine protection guards.' },
+      { name: 'Carriers', slug: 'carriers', image: '/carriers.png', description: 'Rear carriers and luggage-ready racks.' },
+      { name: 'Accessories', slug: 'accessories', image: '/accessories.png', description: 'Daily-use motorcycle accessories.' },
+    ];
+
+    const createdCategories = await Category.create(defaultCategories);
+    const categoryMap = new Map(createdCategories.map((cat: any) => [cat.slug, cat._id]));
     await Product.create([
       {
         title: 'Dominar 400 Premium Crash Guard with Sliders',
@@ -66,6 +88,7 @@ async function seed() {
         price: 4500,
         originalPrice: 5500,
         images: ['https://images.unsplash.com/photo-1558981403-c5f9899a289f?w=800&q=80', 'https://images.unsplash.com/photo-1558980664-ce6960e61139?w=800&q=80'],
+        categoryId: categoryMap.get('accessories') ?? undefined,
         categories: ['crash-guards', 'dominar-400'],
         rating: 4.8,
         numReviews: 124,
@@ -84,6 +107,7 @@ async function seed() {
         price: 2200,
         originalPrice: 2800,
         images: ['https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=500&q=80'],
+        categoryId: categoryMap.get('carriers') ?? undefined,
         categories: ['carriers', 'royal-enfield'],
         rating: 4.5,
         numReviews: 89,
@@ -102,6 +126,7 @@ async function seed() {
           'https://images.unsplash.com/photo-1558981403-c5f9899a289f?w=1200&q=80',
           'https://images.unsplash.com/photo-1558980664-ce6960e61139?w=1200&q=80'
         ],
+        categoryId: categoryMap.get('carriers') ?? undefined,
         categories: ['carriers', 'triumph', 'scrambler-400x'],
         rating: 4.7,
         numReviews: 58,

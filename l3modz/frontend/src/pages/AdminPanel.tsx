@@ -6,7 +6,6 @@ import { apiFetch } from '@/lib/api';
 import type { ReactNode } from 'react';
 
 type AdminTab = 'dashboard' | 'categories' | 'products' | 'orders' | 'users';
-const ALLOWED_CATEGORIES = ['footrest', 'radiator-guards', 'carriers', 'accessories'] as const;
 const DELIVERY_PARTNERS = ['Shiprocket', 'India Post', 'Other'] as const;
 
 interface Product {
@@ -18,7 +17,7 @@ interface Product {
   inStock: boolean;
   stock?: number;
   images?: string[];
-  categories?: string[];
+  categoryId?: string | { _id?: string; name?: string; slug?: string };
   description?: string;
   features?: string[];
   specs?: {
@@ -158,19 +157,14 @@ interface ShiprocketDiagnostics {
   };
 }
 
-const DEFAULT_HOME_CATEGORY_CARDS: HomeCategory[] = [
-  { name: 'Footrests', slug: 'footrest', image: '/footrest-l321.png', description: 'Premium footrests and riding pegs.' },
-  { name: 'Radiator Guards', slug: 'radiator-guards', image: '/radiator-guard-l3.png', description: 'Radiator and engine protection guards.' },
-  { name: 'Carriers', slug: 'carriers', image: '/carriers.png', description: 'Rear carriers and luggage-ready racks.' },
-  { name: 'Accessories', slug: 'accessories', image: '/accessories.png', description: 'Daily-use motorcycle accessories.' },
-];
+// DEFAULT_HOME_CATEGORY_CARDS removed — categories are loaded from API at runtime
 
 interface NewProductForm {
   title: string;
   slug: string;
   price: number;
   originalPrice: number;
-  category: (typeof ALLOWED_CATEGORIES)[number];
+  category: string;
   bikeBrand: string;
   bikeModel: string;
   bikeYear: string;
@@ -228,6 +222,7 @@ export default function AdminPanelPage() {
   const [awbDraft, setAwbDraft] = useState('');
   const [trackingUrlDraft, setTrackingUrlDraft] = useState('');
   const [availableCategories, setAvailableCategories] = useState<CategoryOption[]>([]);
+  const [adminCategories, setAdminCategories] = useState<CategoryOption[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [categoriesError, setCategoriesError] = useState('');
 
@@ -251,7 +246,7 @@ export default function AdminPanelPage() {
     slug: '',
     price: 0,
     originalPrice: 0,
-    category: 'accessories',
+    category: '',
     bikeBrand: '',
     bikeModel: '',
     bikeYear: 'All',
@@ -318,6 +313,9 @@ export default function AdminPanelPage() {
       setProducts(Array.isArray(productsData) ? productsData : []);
       setOrders(Array.isArray(ordersData) ? ordersData : []);
       setUsers(Array.isArray(usersData) ? usersData : []);
+      const cats = Array.isArray(categoriesData) ? categoriesData : [];
+      setAvailableCategories(cats);
+      setAdminCategories(cats);
       setCategoryCards(
         Array.isArray(categoriesData)
           ? categoriesData.map((item: HomeCategory) => ({
@@ -336,8 +334,20 @@ export default function AdminPanelPage() {
     }
   };
 
+  // Separate small helper to refresh admin categories (used after create/update/delete)
+  const fetchAdminCategories = async () => {
+    try {
+      const res = await fetch('/api/categories', { credentials: 'include' });
+      const data = await res.json();
+      setAdminCategories(Array.isArray(data) ? data : (data.data ?? []));
+    } catch {
+      setAdminCategories([]);
+    }
+  };
+
   useEffect(() => {
     fetchAdminData();
+    fetchAdminCategories();
   }, []);
 
   useEffect(() => {
@@ -406,8 +416,14 @@ export default function AdminPanelPage() {
 
     const cleanedImages = newProductImages.map((img) => img.trim()).filter(Boolean);
 
-    if (!ALLOWED_CATEGORIES.includes(newProduct.category)) {
-      setMessage('Category must be one of: footrest, radiator-guards, carriers, accessories.');
+    if (!newProduct.category) {
+      setMessage('Category is required.');
+      return;
+    }
+
+    const selectedCategory = adminCategories.find((cat) => cat._id === newProduct.category);
+    if (!selectedCategory) {
+      setMessage('Selected category is invalid. Please choose a valid category.');
       return;
     }
 
@@ -417,13 +433,14 @@ export default function AdminPanelPage() {
     }
 
     try {
+      const selectedCategory = adminCategories.find((cat) => cat._id === newProduct.category);
       const payload = {
         title,
         slug,
         price: Number(newProduct.price),
         originalPrice: Number(newProduct.originalPrice) > 0 ? Number(newProduct.originalPrice) : Number(newProduct.price),
         images: cleanedImages.length > 0 ? cleanedImages : ['/file.svg'],
-        categories: [newProduct.category],
+        categoryId: selectedCategory?._id,
         description,
         features: newProduct.features
           .split(',')
@@ -463,7 +480,7 @@ export default function AdminPanelPage() {
         slug: '',
         price: 0,
         originalPrice: 0,
-        category: 'accessories',
+        category: '',
         bikeBrand: '',
         bikeModel: '',
         bikeYear: 'All',
@@ -748,6 +765,7 @@ export default function AdminPanelPage() {
       if (!res.ok) throw new Error(data.message || 'Failed to delete category');
       setCategoryCards((prev) => prev.filter((_, idx) => idx !== index));
       setMessage('Category card deleted.');
+      fetchAdminCategories();
     } catch (err: any) {
       setMessage(err.message || 'Failed to delete category');
     } finally {
@@ -766,12 +784,12 @@ export default function AdminPanelPage() {
 
     try {
       const responses = await Promise.all(
-        DEFAULT_HOME_CATEGORY_CARDS.map((card) =>
+        categoryCards.map((card) =>
           apiFetch('/api/categories', {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(card),
+            body: JSON.stringify({ name: card.name, image: card.image, description: card.description }),
           })
         )
       );
@@ -785,6 +803,7 @@ export default function AdminPanelPage() {
       const created = await Promise.all(responses.map((res) => res.json()));
       setCategoryCards(created);
       setMessage('Default category cards created. You can now edit names and images.');
+      fetchAdminCategories();
     } catch (err: any) {
       setMessage(err.message || 'Failed to create default category cards');
     } finally {
@@ -797,12 +816,11 @@ export default function AdminPanelPage() {
     if (!item) return;
 
     const name = item.name.trim();
-    const slug = slugify(item.slug || item.name);
     const image = (item.image || '').trim();
     const description = (item.description || '').trim();
 
-    if (!name || !slug) {
-      setMessage('Category name and slug are required.');
+    if (!name) {
+      setMessage('Category name is required.');
       return;
     }
 
@@ -815,7 +833,7 @@ export default function AdminPanelPage() {
         method: isEdit ? 'PUT' : 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, slug, image, description }),
+        body: JSON.stringify({ name, image, description }),
       });
 
       const data = await res.json();
@@ -823,6 +841,7 @@ export default function AdminPanelPage() {
 
       setCategoryCards((prev) => prev.map((card, idx) => (idx === index ? data : card)));
       setMessage('Category card saved successfully.');
+      fetchAdminCategories();
     } catch (err: any) {
       setMessage(err.message || 'Failed to save category');
     } finally {
@@ -892,8 +911,8 @@ export default function AdminPanelPage() {
   };
 
   const categoryOptions = useMemo(() => {
-    return ['all', ...ALLOWED_CATEGORIES];
-  }, []);
+    return ['all', ...availableCategories.map((cat) => cat.slug)];
+  }, [availableCategories]);
 
   const openProductDetails = async (id: string, mode: 'view' | 'edit') => {
     setMessage('');
@@ -954,7 +973,11 @@ export default function AdminPanelPage() {
       console.log('productDraft.originalPrice (MRP):', productDraft.originalPrice, typeof productDraft.originalPrice);
       console.log('productDraft.price (Selling):', productDraft.price, typeof productDraft.price);
       
-      const payload = buildProductPayload(productDraft);
+      const categoryId = adminCategories.find((cat) => cat._id === productDraft.category)?._id;
+      if (!categoryId) {
+        throw new Error('Selected category is invalid. Please choose a valid category.');
+      }
+      const payload = buildProductPayload(productDraft, categoryId);
       
       // === STEP 2: AFTER PAYLOAD BUILD ===
       console.log('');
@@ -1176,9 +1199,11 @@ export default function AdminPanelPage() {
       const q = productSearch.trim().toLowerCase();
       const matchesSearch = !q || p.title.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q);
       const matchesStock = productStockFilter === 'all' || (productStockFilter === 'in' ? p.inStock : !p.inStock);
-      const matchesCategory =
-        productCategoryFilter === 'all' ||
-        (p.categories || []).some((c) => c.toLowerCase() === productCategoryFilter.toLowerCase());
+      const productSlug =
+        typeof p.categoryId === 'string'
+          ? p.categoryId
+          : p.categoryId?.slug || '';
+      const matchesCategory = productCategoryFilter === 'all' || productSlug.toLowerCase() === productCategoryFilter.toLowerCase();
       return matchesSearch && matchesStock && matchesCategory;
     });
   }, [products, productSearch, productStockFilter, productCategoryFilter]);
@@ -1562,13 +1587,14 @@ export default function AdminPanelPage() {
                     onChange={(e) =>
                       setNewProduct((prev) => ({
                         ...prev,
-                        category: e.target.value as (typeof ALLOWED_CATEGORIES)[number],
+                        category: e.target.value,
                       }))
                     }
                     className="rounded-lg border border-brand-border px-3 py-2"
                   >
-                    {ALLOWED_CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
+                    <option value="">No category</option>
+                    {adminCategories.map((cat) => (
+                      <option key={cat._id} value={cat._id}>{cat.name}</option>
                     ))}
                   </select>
                   <input
@@ -1703,7 +1729,7 @@ export default function AdminPanelPage() {
                   className="mt-3 w-full rounded-lg border border-brand-border px-3 py-2"
                 />
                 <p className="mt-2 text-xs text-gray-500">
-                  Allowed categories: footrest, radiator-guards, carriers, accessories.
+                  Categories are loaded dynamically from the database and used throughout product creation, filtering, and editing.
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
                   Field guide: Selling Price = current sale price, MRP = strikethrough/original price, Rating = stars on product card/detail, No. of Reviews = review count shown near stars, SKU = internal product code.
@@ -2131,9 +2157,9 @@ export default function AdminPanelPage() {
                           </div>
                         ) : (
                           <select value={productDraft.category} onChange={(e) => setProductDraft({ ...productDraft, category: e.target.value })} className="w-full rounded-lg border border-brand-border px-3 py-2">
-                            <option value="">Select a category</option>
-                            {availableCategories.map((cat) => (
-                              <option key={cat._id} value={cat.slug}>
+                            <option value="">No category</option>
+                            {adminCategories.map((cat) => (
+                              <option key={cat._id} value={cat._id}>
                                 {cat.name}
                               </option>
                             ))}
@@ -2147,7 +2173,7 @@ export default function AdminPanelPage() {
                       </div>
                     ) : (
                       <div className="space-y-2 text-sm text-gray-700">
-                        <p><span className="font-semibold">Categories:</span> {(selectedProduct.categories || []).join(', ') || '-'}</p>
+                        <p><span className="font-semibold">Category:</span> {typeof selectedProduct.categoryId === 'string' ? selectedProduct.categoryId : selectedProduct.categoryId?.name || selectedProduct.categoryId?.slug || '-'}</p>
                         <p><span className="font-semibold">Features:</span> {(selectedProduct.features || []).join(', ') || '-'}</p>
                         <p><span className="font-semibold">SKU:</span> {selectedProduct.specs?.sku || '-'}</p>
                         <p><span className="font-semibold">Material:</span> {selectedProduct.specs?.material || '-'}</p>
@@ -2446,13 +2472,20 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 }
 
 function buildProductDraft(product: Product): ProductEditorDraft {
+  const categorySlug =
+    product.categoryId && typeof product.categoryId !== 'string'
+      ? product.categoryId.slug
+      : typeof product.categoryId === 'string'
+      ? product.categoryId
+      : '';
+
   return {
     title: product.title || '',
     slug: product.slug || '',
     price: Number(product.price) || 0,
     originalPrice: Number(product.originalPrice) || 0,
     imagesText: (product.images || []).join('\n'),
-    category: (product.categories && product.categories[0]) || '',
+    category: categorySlug || '',
     description: product.description || '',
     featuresText: (product.features || []).join(', '),
     sku: product.specs?.sku || '',
@@ -2469,13 +2502,11 @@ function buildProductDraft(product: Product): ProductEditorDraft {
   };
 }
 
-function buildProductPayload(draft: ProductEditorDraft) {
+function buildProductPayload(draft: ProductEditorDraft, categoryId?: string) {
   const images = draft.imagesText
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean);
-
-  const categories = draft.category ? [draft.category] : ['accessories'];
 
   const features = draft.featuresText
     .split(',')
@@ -2498,7 +2529,7 @@ function buildProductPayload(draft: ProductEditorDraft) {
     price: Number(draft.price) || 0,
     originalPrice: Number(draft.originalPrice) > 0 ? Number(draft.originalPrice) : Number(draft.price) || 0,
     images: images.length > 0 ? images : ['/file.svg'],
-    categories,
+    categoryId,
     description: draft.description.trim(),
     features,
     specs: {

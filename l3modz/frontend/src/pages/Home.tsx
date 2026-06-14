@@ -13,16 +13,10 @@ type HomeCategory = {
   image?: string;
 };
 
-const FALLBACK_CATEGORIES: HomeCategory[] = [
-  { name: "Footrests", slug: "footrest", image: "/footrest-l321.png" },
-  { name: "Radiator Guards", slug: "radiator-guards", image: "/radiator-guard-l3.png" },
-  { name: "Carriers", slug: "carriers", image: "/carriers.png" },
-  { name: "Accessories", slug: "accessories", image: "/accessories.png" },
-];
-
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<HomeCategory[]>(FALLBACK_CATEGORIES);
+  const [categories, setCategories] = useState<HomeCategory[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
 
   useEffect(() => {
     async function fetchHomeData() {
@@ -53,8 +47,10 @@ export default function Home() {
             }
           }
         }
+        setCategoriesLoading(false);
       } catch (error) {
         console.error("Failed to fetch homepage data", error);
+        setCategoriesLoading(false);
       }
     }
 
@@ -133,14 +129,24 @@ export default function Home() {
           </Link>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          {categories.map((cat) => (
+          {categoriesLoading ? (
+            Array.from({ length: 4 }).map((_, idx) => (
+              <div key={idx} className="rounded-2xl border border-brand-border bg-gray-100 aspect-[4/3] animate-pulse" />
+            ))
+          ) : categories.length > 0 ? (
+            categories.map((cat) => (
             <Link key={cat.slug} to={`/products?category=${cat.slug}`} className="group relative rounded-2xl overflow-hidden aspect-[4/3] bg-gray-100 flex items-center justify-center border border-brand-border shadow-sm">
               <img src={cat.image || '/file.svg'} alt={cat.name} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-4">
                 <h3 className="text-white font-bold text-lg md:text-xl tracking-wide">{cat.name}</h3>
               </div>
             </Link>
-          ))}
+            ))
+          ) : (
+            <div className="col-span-full rounded-2xl border border-brand-border bg-white p-10 text-center text-gray-500">
+              No categories available yet. Check back soon.
+            </div>
+          )}
         </div>
       </section>
 

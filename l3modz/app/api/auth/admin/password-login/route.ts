@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
-import { comparePassword, getAuthCookieOptions, hashPassword, signToken } from '@/lib/auth';
+import { comparePassword, getAuthCookieOptions, signToken } from '@/lib/auth';
 import { cookies } from 'next/headers';
-import { getEnvValue, validateProductionEnv } from '@/lib/env';
-
-const ADMIN_EMAIL = getEnvValue('ADMIN_EMAIL') || 'admin@l3modz.com';
-const ADMIN_PASSWORD = getEnvValue('ADMIN_PASSWORD') || 'l3modz@admin2022';
+import { requireEnv, validateProductionEnv } from '@/lib/env';
+import { adminLoginLimiter, getClientIdentifier } from '@/lib/rateLimit';
+import { logAdminLoginAttempt, logRateLimitViolation } from '@/lib/securityLogger';
 
 function normalizeEmail(raw: string) {
   return (raw || '').toLowerCase().trim();
@@ -14,50 +13,54 @@ function normalizeEmail(raw: string) {
 
 export async function POST(req: Request) {
   try {
+    // Validate production environment
     if (process.env.NODE_ENV === 'production') {
       validateProductionEnv();
-      if (!getEnvValue('ADMIN_EMAIL') || !getEnvValue('ADMIN_PASSWORD')) {
-        return NextResponse.json({ message: 'Admin login is not configured' }, { status: 503 });
-      }
     }
 
-    await dbConnect();
+    // Get client identifier for rate limiting
+    const clientIp = getClientIdentifier(req);
     const body = await req.json().catch(() => ({}));
     const email = normalizeEmail(body.email || '');
     const password = String(body.password || '');
-    const authorizedEmail = normalizeEmail(ADMIN_EMAIL);
+
+    // Rate limit by email and IP combined
+    const rateLimitKey = `${email}:${clientIp}`;
+    const rateLimitResult = adminLoginLimiter.check(rateLimitKey);
+
+    if (!rateLimitResult.allowed) {
+      logRateLimitViolation(rateLimitKey, 'admin_login', rateLimitResult.resetAt);
+      return NextResponse.json(
+        {
+          message: 'Too many login attempts. Please try again later.',
+          retryAfter: Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000),
+        },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000)) } }
+      );
+    }
 
     if (!email || !password) {
+      logAdminLoginAttempt(email, clientIp, false, 'Missing email or password');
       return NextResponse.json({ message: 'Email and password are required' }, { status: 400 });
+    }
+
+    // Require environment variables in production, allow override in dev/test
+    const ADMIN_EMAIL = requireEnv('ADMIN_EMAIL');
+    const ADMIN_PASSWORD = requireEnv('ADMIN_PASSWORD');
+    const authorizedEmail = normalizeEmail(ADMIN_EMAIL);
+
+    await dbConnect();
+
+    // Check credentials first before database lookup
+    if (email !== authorizedEmail || password !== ADMIN_PASSWORD) {
+      logAdminLoginAttempt(email, clientIp, false, 'Invalid credentials');
+      return NextResponse.json({ message: 'Invalid admin credentials' }, { status: 401 });
     }
 
     const adminUser = await User.findOne({ role: 'admin' });
     if (!adminUser) {
+      logAdminLoginAttempt(email, clientIp, false, 'Admin user not found');
       return NextResponse.json({ message: 'Admin account not configured' }, { status: 404 });
-    }
-
-    // Keep admin identity pinned to the configured email.
-    if (normalizeEmail(adminUser.email) !== authorizedEmail) {
-      adminUser.email = authorizedEmail;
-      await adminUser.save();
-    }
-
-    let isMatch = false;
-    if (adminUser.password) {
-      isMatch = await comparePassword(password, adminUser.password);
-    }
-
-    // Allow configured admin fallback password and persist as hash for subsequent logins.
-    if (!isMatch && password === ADMIN_PASSWORD) {
-      if (!adminUser.password || !(await comparePassword(ADMIN_PASSWORD, adminUser.password))) {
-        adminUser.password = await hashPassword(ADMIN_PASSWORD);
-        await adminUser.save();
-      }
-      isMatch = true;
-    }
-
-    if (!isMatch) {
-      return NextResponse.json({ message: 'Invalid admin credentials' }, { status: 401 });
     }
 
     const token = signToken({ id: adminUser._id, role: adminUser.role });
@@ -65,13 +68,9 @@ export async function POST(req: Request) {
     const cookieStore = await cookies();
     const cookieOptions = getAuthCookieOptions();
     cookieStore.set('token', token, cookieOptions);
-    console.info('[Auth] admin login cookie set', {
-      adminId: String(adminUser._id),
-      email: adminUser.email,
-      secure: cookieOptions.secure,
-      sameSite: cookieOptions.sameSite,
-      hasDomain: Boolean((cookieOptions as { domain?: string }).domain),
-    });
+
+    logAdminLoginAttempt(email, clientIp, true);
+    adminLoginLimiter.reset(rateLimitKey);
 
     return NextResponse.json({
       message: 'Admin login successful',
@@ -83,6 +82,10 @@ export async function POST(req: Request) {
       },
     });
   } catch (error: any) {
-    return NextResponse.json({ message: error.message || 'Server error' }, { status: 500 });
+    // Log but don't expose error details in response
+    if (error.message.includes('is not configured')) {
+      return NextResponse.json({ message: 'Admin login is not configured' }, { status: 503 });
+    }
+    return NextResponse.json({ message: 'Server error' }, { status: 500 });
   }
 }
