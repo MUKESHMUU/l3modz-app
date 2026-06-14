@@ -364,6 +364,13 @@ export default function Header() {
 
             {isProductsOpen && (
               <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-52 bg-white border border-brand-border rounded-xl shadow-lg overflow-hidden z-50">
+                <Link
+                  to="/products"
+                  onClick={() => setIsProductsOpen(false)}
+                  className="block px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-brand-primary hover:text-white transition-colors uppercase tracking-wide"
+                >
+                  All Products
+                </Link>
                 {categories.length > 0 ? (
                   categories.map((cat) => (
                     <Link
@@ -376,13 +383,7 @@ export default function Header() {
                     </Link>
                   ))
                 ) : (
-                  <Link
-                    to="/products"
-                    onClick={() => setIsProductsOpen(false)}
-                    className="block px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-brand-primary hover:text-white transition-colors uppercase tracking-wide"
-                  >
-                    All Products
-                  </Link>
+                  <div className="px-5 py-3 text-sm text-gray-500">Loading categories…</div>
                 )}
               </div>
             )}
@@ -415,6 +416,13 @@ export default function Header() {
             </button>
             {isMobileProductsOpen && (
               <div className="pl-4 space-y-1 border-l-2 border-brand-primary/30 ml-2">
+                <Link
+                  to="/products"
+                  className="block font-medium text-gray-600 hover:text-brand-primary px-3 py-2 rounded-md hover:bg-gray-50 text-sm uppercase tracking-wide transition"
+                  onClick={() => { setIsMenuOpen(false); setIsMobileProductsOpen(false); }}
+                >
+                  All Products
+                </Link>
                 {categoriesLoading ? (
                   Array.from({ length: 4 }).map((_, idx) => (
                     <div key={idx} className="h-10 rounded-md bg-brand-bg animate-pulse" />
@@ -431,13 +439,7 @@ export default function Header() {
                     </Link>
                   ))
                 ) : (
-                  <Link
-                    to="/products"
-                    className="block font-medium text-gray-600 hover:text-brand-primary px-3 py-2 rounded-md hover:bg-gray-50 text-sm uppercase tracking-wide transition"
-                    onClick={() => { setIsMenuOpen(false); setIsMobileProductsOpen(false); }}
-                  >
-                    All Products
-                  </Link>
+                  <div className="px-3 py-2 text-sm text-gray-500">No categories available</div>
                 )}
               </div>
             )}
