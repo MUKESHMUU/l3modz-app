@@ -11,12 +11,6 @@ type SearchSuggestion = {
   images?: string[];
 };
 
-type CategoryLink = {
-  _id: string;
-  name: string;
-  slug: string;
-};
-
 const mainLinks = [
   { name: 'HOME', path: '/' },
   { name: 'ABOUT US', path: '/about' },
@@ -36,7 +30,6 @@ export default function Header() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [categories, setCategories] = useState<{ _id: string; name: string; slug: string }[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
-  const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { items } = useCart();
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -137,10 +130,8 @@ export default function Header() {
         }
         const data = await res.json();
         setCategories(Array.isArray(data) ? data : []);
-        setCategoriesError(null);
       } catch (err: any) {
         if (err.name !== 'AbortError') {
-          setCategoriesError('Unable to load categories');
           setCategories([]);
         }
       } finally {
