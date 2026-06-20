@@ -3,7 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import { comparePassword, getAuthCookieOptions, signToken } from '@/lib/auth';
 import { cookies } from 'next/headers';
-import { requireEnv, validateProductionEnv } from '@/lib/env';
+import { requireEnv } from '@/lib/env';
 import { adminLoginLimiter, getClientIdentifier } from '@/lib/rateLimit';
 import { logAdminLoginAttempt, logRateLimitViolation } from '@/lib/securityLogger';
 
@@ -13,11 +13,6 @@ function normalizeEmail(raw: string) {
 
 export async function POST(req: Request) {
   try {
-    // Validate production environment
-    if (process.env.NODE_ENV === 'production') {
-      validateProductionEnv();
-    }
-
     // Get client identifier for rate limiting
     const clientIp = getClientIdentifier(req);
     const body = await req.json().catch(() => ({}));
@@ -82,9 +77,9 @@ export async function POST(req: Request) {
       },
     });
   } catch (error: any) {
-    // Log but don't expose error details in response
-    if (error.message.includes('is not configured')) {
-      return NextResponse.json({ message: 'Admin login is not configured' }, { status: 503 });
+    const message = String(error?.message || 'Server error');
+    if (message.includes('is not configured')) {
+      return NextResponse.json({ message }, { status: 503 });
     }
     return NextResponse.json({ message: 'Server error' }, { status: 500 });
   }

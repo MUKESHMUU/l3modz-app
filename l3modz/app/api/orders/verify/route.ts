@@ -4,14 +4,10 @@ import dbConnect from '@/lib/mongodb';
 import Order from '@/models/Order';
 import { markBillSent, refreshTracking, syncOrderToShiprocket } from '@/lib/orderFulfillment';
 import { sendOrderPaidNotifications, sendOrderShipmentNotifications } from '@/lib/notifications';
-import { getEnvValue, validateProductionEnv } from '@/lib/env';
+import { getEnvValue } from '@/lib/env';
 
 export async function POST(req: Request) {
   try {
-    if (process.env.NODE_ENV === 'production') {
-      validateProductionEnv();
-    }
-
     await dbConnect();
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = await req.json();
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getEnvValue, validateProductionEnv } from '@/lib/env';
+import { getEnvValue } from '@/lib/env';
 import { createLogger } from '@/lib/logger';
 
 const logger = createLogger('razorpay-key');
@@ -16,10 +16,6 @@ export async function OPTIONS() {
 
 export async function GET() {
   try {
-    if (process.env.NODE_ENV === 'production') {
-      validateProductionEnv();
-    }
-
     const headers = new Headers();
     headers.set('Access-Control-Allow-Origin', allowedOrigins[0] || '*');
     headers.set('Access-Control-Allow-Credentials', 'true');
