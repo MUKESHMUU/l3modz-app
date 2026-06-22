@@ -1708,19 +1708,19 @@ export default function AdminPanelPage() {
 
               <div className="overflow-x-auto rounded-2xl border border-brand-border bg-white">
                 <table className="min-w-full text-sm">
-                <thead className="bg-gray-50 text-left text-gray-600">
+                <thead className="bg-gray-50 text-left text-gray-600 sticky top-0">
                   <tr>
-                    <th className="px-4 py-3">Title</th>
-                    <th className="px-4 py-3">Selling Price</th>
-                    <th className="px-4 py-3">Stock</th>
-                    <th className="px-4 py-3">Images</th>
-                    <th className="px-4 py-3">In Stock</th>
-                    <th className="px-4 py-3">Actions</th>
+                    <th className="px-4 py-3 min-w-[300px] font-semibold">Title</th>
+                    <th className="px-4 py-3 min-w-[120px] font-semibold">Selling Price</th>
+                    <th className="px-4 py-3 min-w-[80px] font-semibold">Stock</th>
+                    <th className="px-4 py-3 min-w-[260px] font-semibold">Images</th>
+                    <th className="px-4 py-3 min-w-[100px] font-semibold">In Stock</th>
+                    <th className="px-4 py-3 min-w-[300px] font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredProducts.map((p) => (
-                    <tr key={p._id} className="border-t border-brand-border">
+                    <tr key={p._id} className="border-t border-brand-border align-top">
                       {(() => {
                         const isEditing = editingProductId === p._id;
                         const isSaving = savingId === p._id;
@@ -1732,7 +1732,7 @@ export default function AdminPanelPage() {
                           onChange={(e) => setProducts((prev) => prev.map((x) => (x._id === p._id ? { ...x, title: e.target.value } : x)))}
                           disabled={!isEditing}
                           title={p.title}
-                          className="w-full rounded-lg border border-brand-border px-3 py-2"
+                          className="w-full rounded-lg border border-brand-border px-3 py-2 text-base whitespace-normal overflow-auto break-words"
                         />
                       </td>
                       <td className="px-4 py-3">
@@ -1783,7 +1783,7 @@ export default function AdminPanelPage() {
                         </label>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <Button size="sm" variant="outline" onClick={() => openProductDetails(p._id, 'view')}>
                             <Eye size={14} className="mr-1" /> View
                           </Button>
