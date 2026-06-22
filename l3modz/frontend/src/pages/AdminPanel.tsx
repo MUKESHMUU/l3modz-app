@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PackageSearch, ShoppingBag, Users, IndianRupee, LogOut, RefreshCw, Save, Trash2, Plus, Pencil, XCircle, Eye, Truck, ClipboardList, Package, ShieldCheck, ShieldAlert, Activity } from 'lucide-react';
 import Button from '@/components/Button';
+import ProductTitle from '@/components/ProductTitle';
 import { apiFetch } from '@/lib/api';
 import type { ReactNode } from 'react';
 
@@ -1363,13 +1364,11 @@ export default function AdminPanelPage() {
                     {recentProducts.length > 0 ? recentProducts.map((product) => (
                       <button key={product._id} onClick={() => openProductDetails(product._id, 'view')} className="w-full rounded-xl border border-brand-border p-3 text-left transition hover:border-brand-primary hover:bg-brand-bg">
                         <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="whitespace-normal break-words text-sm font-semibold text-brand-text" title={product.title}>
-                              {product.title}
-                            </p>
-                            <p className="text-xs text-gray-500">{product.slug}</p>
+                          <div className="min-w-0 flex-1">
+                            <ProductTitle title={product.title} variant="table" showTooltip={true} className="block" />
+                            <p className="text-xs text-gray-500 mt-1">{product.slug}</p>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right shrink-0">
                             <p className="text-sm font-semibold text-brand-text">₹{Number(product.price || 0).toLocaleString('en-IN')}</p>
                             <p className="text-xs text-gray-500">{product.inStock ? 'In stock' : 'Out of stock'}</p>
                           </div>
@@ -1489,13 +1488,13 @@ export default function AdminPanelPage() {
                     onChange={(e) =>
                       setNewProduct((prev) => ({ ...prev, title: e.target.value, slug: prev.slug || slugify(e.target.value) }))
                     }
-                    className="rounded-lg border border-brand-border px-3 py-2"
+                    className="w-full rounded-lg border border-brand-border px-3 py-2 whitespace-normal overflow-auto"
                   />
                   <input
                     placeholder="Slug"
                     value={newProduct.slug}
                     onChange={(e) => setNewProduct((prev) => ({ ...prev, slug: slugify(e.target.value) }))}
-                    className="rounded-lg border border-brand-border px-3 py-2"
+                    className="w-full rounded-lg border border-brand-border px-3 py-2"
                   />
                   <input
                     type="number"
@@ -1503,7 +1502,7 @@ export default function AdminPanelPage() {
                     placeholder="Selling Price"
                     value={newProduct.price === 0 ? '' : newProduct.price}
                     onChange={(e) => setNewProduct((prev) => ({ ...prev, price: Number(e.target.value) }))}
-                    className="rounded-lg border border-brand-border px-3 py-2"
+                    className="w-full rounded-lg border border-brand-border px-3 py-2"
                   />
                   <input
                     type="number"
@@ -1511,7 +1510,7 @@ export default function AdminPanelPage() {
                     placeholder="MRP"
                     value={newProduct.originalPrice === 0 ? '' : newProduct.originalPrice}
                     onChange={(e) => setNewProduct((prev) => ({ ...prev, originalPrice: Number(e.target.value) }))}
-                    className="rounded-lg border border-brand-border px-3 py-2"
+                    className="w-full rounded-lg border border-brand-border px-3 py-2"
                   />
                   <select
                     value={newProduct.category}
@@ -1521,7 +1520,7 @@ export default function AdminPanelPage() {
                         category: e.target.value,
                       }))
                     }
-                    className="rounded-lg border border-brand-border px-3 py-2"
+                    className="w-full rounded-lg border border-brand-border px-3 py-2"
                   >
                     <option value="">No category</option>
                     {adminCategories.map((cat) => (
@@ -1532,13 +1531,13 @@ export default function AdminPanelPage() {
                     placeholder="Bike Brand (e.g. Bajaj)"
                     value={newProduct.bikeBrand}
                     onChange={(e) => setNewProduct((prev) => ({ ...prev, bikeBrand: e.target.value }))}
-                    className="rounded-lg border border-brand-border px-3 py-2"
+                    className="w-full rounded-lg border border-brand-border px-3 py-2"
                   />
                   <input
                     placeholder="Bike Model (e.g. Dominar 400)"
                     value={newProduct.bikeModel}
                     onChange={(e) => setNewProduct((prev) => ({ ...prev, bikeModel: e.target.value }))}
-                    className="rounded-lg border border-brand-border px-3 py-2"
+                    className="w-full rounded-lg border border-brand-border px-3 py-2"
                   />
                   <input
                     placeholder="Bike Year (e.g. 2023 or All)"
@@ -2019,15 +2018,15 @@ export default function AdminPanelPage() {
                     </div>
                     {productModalMode === 'edit' && productDraft ? (
                       <div className="grid grid-cols-1 gap-3">
-                        <input value={productDraft.title} onChange={(e) => setProductDraft({ ...productDraft, title: e.target.value })} className="rounded-lg border border-brand-border px-3 py-2" placeholder="Title" />
-                        <input value={productDraft.slug} onChange={(e) => setProductDraft({ ...productDraft, slug: slugify(e.target.value) })} className="rounded-lg border border-brand-border px-3 py-2" placeholder="Slug" />
+                        <input value={productDraft.title} onChange={(e) => setProductDraft({ ...productDraft, title: e.target.value })} className="w-full rounded-lg border border-brand-border px-3 py-2 text-base whitespace-normal overflow-auto" placeholder="Title" />
+                        <input value={productDraft.slug} onChange={(e) => setProductDraft({ ...productDraft, slug: slugify(e.target.value) })} className="w-full rounded-lg border border-brand-border px-3 py-2" placeholder="Slug" />
                         <div className="grid grid-cols-2 gap-3">
-                          <input type="number" min={0} value={productDraft.price} onChange={(e) => setProductDraft({ ...productDraft, price: Number(e.target.value) })} className="rounded-lg border border-brand-border px-3 py-2" placeholder="Selling Price" />
-                          <input type="number" min={0} value={productDraft.originalPrice} onChange={(e) => setProductDraft({ ...productDraft, originalPrice: Number(e.target.value) })} className="rounded-lg border border-brand-border px-3 py-2" placeholder="MRP" />
+                          <input type="number" min={0} value={productDraft.price} onChange={(e) => setProductDraft({ ...productDraft, price: Number(e.target.value) })} className="w-full rounded-lg border border-brand-border px-3 py-2" placeholder="Selling Price" />
+                          <input type="number" min={0} value={productDraft.originalPrice} onChange={(e) => setProductDraft({ ...productDraft, originalPrice: Number(e.target.value) })} className="w-full rounded-lg border border-brand-border px-3 py-2" placeholder="MRP" />
                         </div>
                         <div className="grid grid-cols-2 gap-3">
-                          <input type="number" min={0} max={5} step={0.1} value={productDraft.rating} onChange={(e) => setProductDraft({ ...productDraft, rating: Number(e.target.value) })} className="rounded-lg border border-brand-border px-3 py-2" placeholder="Rating" />
-                          <input type="number" min={0} value={productDraft.numReviews} onChange={(e) => setProductDraft({ ...productDraft, numReviews: Number(e.target.value) })} className="rounded-lg border border-brand-border px-3 py-2" placeholder="No. of Reviews" />
+                          <input type="number" min={0} max={5} step={0.1} value={productDraft.rating} onChange={(e) => setProductDraft({ ...productDraft, rating: Number(e.target.value) })} className="w-full rounded-lg border border-brand-border px-3 py-2" placeholder="Rating" />
+                          <input type="number" min={0} value={productDraft.numReviews} onChange={(e) => setProductDraft({ ...productDraft, numReviews: Number(e.target.value) })} className="w-full rounded-lg border border-brand-border px-3 py-2" placeholder="No. of Reviews" />
                         </div>
                         <input type="number" min={0} value={productDraft.stock} onChange={(e) => setProductDraft({ ...productDraft, stock: Number(e.target.value) || 0 })} className="rounded-lg border border-brand-border px-3 py-2" placeholder="Stock Quantity" />
                         <label className="inline-flex items-center gap-2 rounded-lg border border-brand-border bg-white px-3 py-2 text-sm">
@@ -2037,7 +2036,7 @@ export default function AdminPanelPage() {
                       </div>
                     ) : (
                       <div className="space-y-2 text-sm text-gray-700">
-                        <p><span className="font-semibold">Title:</span> {selectedProduct.title}</p>
+                        <div><span className="font-semibold">Title:</span> <ProductTitle title={selectedProduct.title} variant="modal" showTooltip={true} className="ml-2 font-normal" /></div>
                         <p><span className="font-semibold">Slug:</span> {selectedProduct.slug}</p>
                         <p><span className="font-semibold">Selling Price:</span> ₹{selectedProduct.price.toLocaleString('en-IN')}</p>
                         <p><span className="font-semibold">MRP:</span> ₹{Number(selectedProduct.originalPrice || selectedProduct.price).toLocaleString('en-IN')}</p>

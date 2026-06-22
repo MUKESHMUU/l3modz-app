@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '@/hooks/useCart';
 import { Trash2, ArrowRight, ShoppingBag } from 'lucide-react';
 import Button from '@/components/Button';
+import ProductTitle from '@/components/ProductTitle';
 
 export default function CartPage() {
   const { items, isLoaded, updateQuantity, removeFromCart, getCartTotal } = useCart();
@@ -39,10 +40,10 @@ export default function CartPage() {
               <div className="w-full sm:w-24 h-48 sm:h-24 bg-gray-50 rounded-xl overflow-hidden shrink-0">
                 <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
               </div>
-              <div className="flex-1 flex flex-col justify-between w-full">
-                <div className="w-full">
-                  <Link to={`/products/${item.id}`} className="font-semibold text-brand-text hover:text-brand-primary line-clamp-2">
-                    {item.title}
+              <div className="flex-1 flex flex-col justify-between w-full min-w-0">
+                <div className="w-full min-w-0">
+                  <Link to={`/products/${item.id}`} className="font-semibold text-brand-text hover:text-brand-primary block">
+                    <ProductTitle title={item.title} variant="card" truncate={false} />
                   </Link>
                   <p className="font-bold mt-1">₹{item.price.toLocaleString('en-IN')}</p>
                 </div>

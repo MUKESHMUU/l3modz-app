@@ -3,6 +3,7 @@ import { Star, ShoppingCart } from 'lucide-react';
 import Button from './Button';
 import toast from 'react-hot-toast';
 import { useCart } from '@/hooks/useCart';
+import ProductTitle from './ProductTitle';
 
 interface ProductCardProps {
   product: {
@@ -61,9 +62,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
 
         <Link to={`/products/${product.slug}`} className="flex-grow">
-          <h3 className="text-brand-text font-medium text-sm md:text-base line-clamp-2 hover:text-brand-primary transition">
-            {product.title}
-          </h3>
+          <ProductTitle title={product.title} variant="card" />
         </Link>
 
         <div className="mt-4 flex items-center justify-between">

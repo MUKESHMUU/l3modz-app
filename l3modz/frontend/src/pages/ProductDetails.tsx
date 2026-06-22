@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ProductGallery from '@/components/ProductGallery';
+import ProductTitle from '@/components/ProductTitle';
 import StickyBuyBox from '@/components/StickyBuyBox';
 import CompatibilityChecker from '@/components/CompatibilityChecker';
 import { Star, CheckCircle, List, Settings } from 'lucide-react';
@@ -77,9 +78,7 @@ export default function ProductDetails() {
               <div className="flex items-center space-x-2 text-sm text-brand-primary font-semibold tracking-wider uppercase mb-2">
                 {productCategories.map((c: string) => <span key={c}>{c.replace('-', ' ')}</span>)}
               </div>
-              <h1 className="text-2xl sm:text-3xl md:text-[2rem] lg:text-4xl font-extrabold text-brand-text leading-tight tracking-tight mb-3">
-                {product.title}
-              </h1>
+              <ProductTitle title={product.title} variant="hero" showTooltip={true} />
 
               <div className="flex items-center space-x-4">
                 <div className="flex items-center text-yellow-500">
@@ -207,9 +206,7 @@ export default function ProductDetails() {
                 <div className="flex items-center space-x-2 text-sm text-brand-primary font-semibold tracking-wider uppercase mb-2">
                   {productCategories.map((c: string) => <span key={c}>{c.replace('-', ' ')}</span>)}
                 </div>
-                <h1 className="text-2xl sm:text-3xl md:text-[2rem] lg:text-4xl font-extrabold text-brand-text leading-tight tracking-tight mb-3">
-                  {product.title}
-                </h1>
+                <ProductTitle title={product.title} variant="hero" showTooltip={true} />
 
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center text-yellow-500">
