@@ -1727,12 +1727,14 @@ export default function AdminPanelPage() {
                         return (
                           <>
                       <td className="px-4 py-3">
-                        <input
+                        <textarea
                           value={p.title}
                           onChange={(e) => setProducts((prev) => prev.map((x) => (x._id === p._id ? { ...x, title: e.target.value } : x)))}
                           disabled={!isEditing}
                           title={p.title}
-                          className="w-full rounded-lg border border-brand-border px-3 py-2 text-base whitespace-normal overflow-auto break-words"
+                          rows={3}
+                          className="w-full rounded-lg border border-brand-border px-3 py-2 text-base whitespace-normal break-words resize-none font-medium"
+                          placeholder="Product title"
                         />
                       </td>
                       <td className="px-4 py-3">
