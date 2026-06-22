@@ -350,14 +350,6 @@ export default function AdminPanelPage() {
     fetchAdminCategories();
   }, []);
 
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      fetchAdminData();
-    }, 60000);
-
-    return () => window.clearInterval(intervalId);
-  }, []);
-
   const stats = useMemo(() => {
     const revenue = orders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
     const completedOrders = orders.filter((o) => (o.status || 'Pending') === 'Delivered').length;
@@ -1372,7 +1364,9 @@ export default function AdminPanelPage() {
                       <button key={product._id} onClick={() => openProductDetails(product._id, 'view')} className="w-full rounded-xl border border-brand-border p-3 text-left transition hover:border-brand-primary hover:bg-brand-bg">
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-brand-text">{product.title}</p>
+                            <p className="whitespace-normal break-words text-sm font-semibold text-brand-text" title={product.title}>
+                              {product.title}
+                            </p>
                             <p className="text-xs text-gray-500">{product.slug}</p>
                           </div>
                           <div className="text-right">
@@ -1738,6 +1732,7 @@ export default function AdminPanelPage() {
                           value={p.title}
                           onChange={(e) => setProducts((prev) => prev.map((x) => (x._id === p._id ? { ...x, title: e.target.value } : x)))}
                           disabled={!isEditing}
+                          title={p.title}
                           className="w-full rounded-lg border border-brand-border px-3 py-2"
                         />
                       </td>
