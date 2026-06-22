@@ -1,5 +1,5 @@
 "use client";
-import React, { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 interface ProductTitleProps {
   title: string;
