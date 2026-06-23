@@ -964,6 +964,10 @@ export default function AdminPanelPage() {
         throw new Error('Selected category is invalid. Please choose a valid category.');
       }
       const payload = buildProductPayload(productDraft, categoryId);
+      // Debug: log payload being sent to server when saving detailed product
+      // Helps trace originalPrice not persisting in some environments
+      // eslint-disable-next-line no-console
+      console.debug('[AdminPanel] saveDetailedProduct payload:', { productId: selectedProduct?._id, payload });
       
       const res = await apiFetch(`/api/products/${selectedProduct._id}`, {
         method: 'PUT',
@@ -972,7 +976,10 @@ export default function AdminPanelPage() {
       });
 
       const data = await res.json();
-      
+      // Debug: log server response
+      // eslint-disable-next-line no-console
+      console.debug('[AdminPanel] saveDetailedProduct response:', { status: res.status, data });
+
       if (!res.ok) {
         throw new Error(data.message || 'Failed to update product');
       }

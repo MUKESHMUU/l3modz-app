@@ -35,6 +35,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     await dbConnect();
     const id = (await params).id;
     const body = await req.json();
+    // Debug: log incoming body for update requests to trace originalPrice handling
+    // Note: Keep logs minimal in production
+    // eslint-disable-next-line no-console
+    console.debug('[API] PUT /api/products/[id] body:', { id, body });
     
     const rawStock = body?.stock;
     const stockValue = rawStock === undefined || rawStock === null || rawStock === '' ? 0 : Number(rawStock);
@@ -70,6 +74,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         updatePayload.categoryId = null;
       }
     }
+
+    // Debug: log the payload that will be used for update
+    // eslint-disable-next-line no-console
+    console.debug('[API] PUT /api/products/[id] updatePayload:', { id, updatePayload });
 
     const product = await Product.findByIdAndUpdate(id, updatePayload, { new: true, runValidators: true })
       .populate('categoryId', 'name slug');
