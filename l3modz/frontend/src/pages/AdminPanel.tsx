@@ -959,11 +959,21 @@ export default function AdminPanelPage() {
     setMessage('');
 
     try {
-      const categoryId = adminCategories.find((cat) => cat._id === productDraft.category || cat.slug === productDraft.category)?._id;
-      if (!categoryId) {
-        throw new Error('Selected category is invalid. Please choose a valid category.');
+      // Resolve categoryId from adminCategories first, then availableCategories.
+      // If productDraft.category is empty, treat as explicit 'no category' (null).
+      let categoryId: string | null | undefined;
+      if (!productDraft.category) {
+        categoryId = null;
+      } else {
+        categoryId = adminCategories.find((cat) => cat._id === productDraft.category || cat.slug === productDraft.category)?._id
+          || availableCategories.find((cat) => cat._id === productDraft.category || cat.slug === productDraft.category)?._id
+          || null;
       }
-      const payload = buildProductPayload(productDraft, categoryId);
+      // Debug: resolved categoryId (null means explicit none)
+      // eslint-disable-next-line no-console
+      console.debug('[AdminPanel] resolved categoryId for saveDetailedProduct', { productDraftCategory: productDraft.category, categoryId });
+
+      const payload = buildProductPayload(productDraft, categoryId === undefined ? undefined : categoryId);
       // Debug: log payload being sent to server when saving detailed product
       // Helps trace originalPrice not persisting in some environments
       // eslint-disable-next-line no-console
