@@ -2468,7 +2468,7 @@ function buildProductDraft(product: Product): ProductEditorDraft {
   };
 }
 
-function buildProductPayload(draft: ProductEditorDraft, categoryId?: string) {
+function buildProductPayload(draft: ProductEditorDraft, categoryId?: string | null) {
   const images = draft.imagesText
     .split('\n')
     .map((line) => line.trim())
