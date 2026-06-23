@@ -984,11 +984,25 @@ export default function AdminPanelPage() {
         throw new Error(data.message || 'Failed to update product');
       }
 
-      // Update products list
+      // Update products list with returned data
       setProducts((prev) => prev.map((p) => (p._id === selectedProduct._id ? data : p)));
-      
-      // Update selected product with fresh data
-      setSelectedProduct(data);
+
+      // Re-fetch the product from server to ensure UI reflects persisted DB state
+      try {
+        const freshRes = await apiFetch(`/api/products/${selectedProduct._id}`);
+        if (freshRes.ok) {
+          const fresh = await freshRes.json();
+          setSelectedProduct(fresh);
+          // also update products list with freshest representation
+          setProducts((prev) => prev.map((p) => (p._id === selectedProduct._id ? fresh : p)));
+        } else {
+          // fallback to returned data
+          setSelectedProduct(data);
+        }
+      } catch (e) {
+        // network error: fallback to returned data
+        setSelectedProduct(data);
+      }
       
       // Clear productDraft to force fresh state
       setProductDraft(null);
