@@ -505,7 +505,9 @@ export default function AdminPanelPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: product.title,
+          slug: product.slug,
           price: Number(product.price),
+          originalPrice: Number(product.originalPrice) || Number(product.price),
           inStock: product.inStock,
           stock: Math.max(0, Number(product.stock) || 0),
           images: (product.images || []).map((img) => img.trim()).filter(Boolean),
@@ -957,7 +959,7 @@ export default function AdminPanelPage() {
     setMessage('');
 
     try {
-      const categoryId = adminCategories.find((cat) => cat._id === productDraft.category)?._id;
+      const categoryId = adminCategories.find((cat) => cat._id === productDraft.category || cat.slug === productDraft.category)?._id;
       if (!categoryId) {
         throw new Error('Selected category is invalid. Please choose a valid category.');
       }
@@ -2405,9 +2407,9 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 }
 
 function buildProductDraft(product: Product): ProductEditorDraft {
-  const categorySlug =
+  const categoryValue =
     product.categoryId && typeof product.categoryId !== 'string'
-      ? product.categoryId.slug
+      ? product.categoryId._id || product.categoryId.slug || ''
       : typeof product.categoryId === 'string'
       ? product.categoryId
       : '';
@@ -2418,7 +2420,7 @@ function buildProductDraft(product: Product): ProductEditorDraft {
     price: Number(product.price) || 0,
     originalPrice: Number(product.originalPrice) || 0,
     imagesText: (product.images || []).join('\n'),
-    category: categorySlug || '',
+    category: categoryValue || '',
     description: product.description || '',
     featuresText: (product.features || []).join(', '),
     sku: product.specs?.sku || '',

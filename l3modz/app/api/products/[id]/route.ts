@@ -48,7 +48,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       title: body.title,
       slug: body.slug,
       price: body.price,
-      originalPrice: body.originalPrice,
       images: body.images,
       description: body.description,
       features: body.features,
@@ -59,6 +58,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       inStock,
       stock,
     };
+
+    if (Object.prototype.hasOwnProperty.call(body, 'originalPrice')) {
+      updatePayload.originalPrice = Number(body.originalPrice);
+    }
 
     if (Object.prototype.hasOwnProperty.call(body, 'categoryId')) {
       if (body.categoryId) {

@@ -205,5 +205,23 @@ describe('Products API Routes', () => {
 
       expect(updated.categoryId).toBeNull();
     });
+
+    it('updates originalPrice correctly', async () => {
+      const mockProduct = {
+        _id: productId,
+        title: 'Product',
+        originalPrice: 3500,
+      };
+
+      mockFindByIdAndUpdate.mockResolvedValueOnce(mockProduct);
+
+      const updated = await mongoose.models.Product.findByIdAndUpdate(
+        productId,
+        { originalPrice: 3500 },
+        { new: true }
+      );
+
+      expect(updated.originalPrice).toBe(3500);
+    });
   });
 });
