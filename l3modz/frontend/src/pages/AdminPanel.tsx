@@ -427,6 +427,7 @@ export default function AdminPanelPage() {
 
     try {
       const selectedCategory = adminCategories.find((cat) => cat._id === newProduct.category);
+      const features = normalizeKeywordList(newProduct.features);
       const payload = {
         title,
         slug,
@@ -435,10 +436,7 @@ export default function AdminPanelPage() {
         images: cleanedImages.length > 0 ? cleanedImages : ['/file.svg'],
         categoryId: selectedCategory?._id,
         description,
-        features: newProduct.features
-          .split(',')
-          .map((f) => f.trim())
-          .filter(Boolean),
+        features,
         specs: {
           sku: newProduct.sku.trim() || `SKU-${Date.now()}`,
           material: newProduct.material.trim() || 'Steel',
@@ -456,6 +454,9 @@ export default function AdminPanelPage() {
         inStock: newProduct.inStock,
         stock: Math.max(0, Number(newProduct.stock) || 0),
       };
+
+      // eslint-disable-next-line no-console
+      console.debug('[AdminPanel] createProduct submit payload:', { title, slug, featuresInput: newProduct.features, features, payload });
 
       const res = await apiFetch('/api/products', {
         method: 'POST',
@@ -2474,10 +2475,7 @@ function buildProductPayload(draft: ProductEditorDraft, categoryId?: string | nu
     .map((line) => line.trim())
     .filter(Boolean);
 
-  const features = draft.featuresText
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
+  const features = normalizeKeywordList(draft.featuresText);
 
   const compatibility = draft.compatibilityText
     .split('\n')
@@ -2518,4 +2516,22 @@ function slugify(input: string) {
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-');
+}
+
+function normalizeKeywordList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .flatMap((item) => String(item).split(','))
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
 }

@@ -5,6 +5,24 @@ import Product from '@/models/Product';
 import Category from '@/models/Category';
 import { checkAdmin } from '@/lib/checkAuth';
 
+function normalizeKeywordList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .flatMap((item) => String(item).split(','))
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
 export async function GET(req: Request) {
   try {
     await dbConnect();
@@ -66,6 +84,12 @@ export async function GET(req: Request) {
 
     const products = await productsQuery.lean();
 
+    // eslint-disable-next-line no-console
+    console.debug('[API] GET /api/products response sample:', {
+      count: Array.isArray(products) ? products.length : 0,
+      firstProductFeatures: Array.isArray(products) && products[0] ? products[0].features : undefined,
+    });
+
     return NextResponse.json(Array.isArray(products) ? products : []);
   } catch (error: any) {
     return NextResponse.json({ message: 'Failed to load products' }, { status: 500 });
@@ -89,6 +113,14 @@ export async function POST(req: Request) {
     }
     const stock = Math.max(0, stockValue);
     const inStock = typeof body?.inStock === 'boolean' ? body.inStock : stock > 0;
+    const features = normalizeKeywordList(body?.features);
+
+    // eslint-disable-next-line no-console
+    console.debug('[API] POST /api/products incoming body:', {
+      title: body?.title,
+      featuresInput: body?.features,
+      normalizedFeatures: features,
+    });
     
     // expecting full product payload
     const categoryId = body?.categoryId && mongoose.Types.ObjectId.isValid(body.categoryId)
@@ -97,10 +129,18 @@ export async function POST(req: Request) {
 
     const product = await Product.create({
       ...body,
+      features,
       categoryId,
       stock,
       inStock,
     });
+
+    // eslint-disable-next-line no-console
+    console.debug('[API] POST /api/products saved document:', {
+      id: product._id,
+      features: product.features,
+    });
+
     const created = await Product.findById(product._id).populate('categoryId', 'name slug').lean();
     return NextResponse.json(created, { status: 201 });
   } catch (error: any) {

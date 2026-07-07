@@ -106,6 +106,16 @@ export default function ProductDetails() {
   const firstKeyword = productKeywords[0] || '';
   const remainingKeywords = productKeywords.slice(1);
 
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.debug('[ProductDetails] render product data:', {
+      id,
+      features: product?.features,
+      keywords: product?.keywords,
+      productKeywords,
+    });
+  }, [id, product?.features, product?.keywords, productKeywords]);
+
   const descriptionText = (product.description || 'Premium motorcycle accessory designed for maximum durability and perfect fitment.').trim();
   const descriptionPoints = descriptionText
     .split(/\r?\n/)

@@ -4,6 +4,24 @@ import dbConnect from '@/lib/mongodb';
 import Product from '@/models/Product';
 import { checkAdmin } from '@/lib/checkAuth';
 
+function normalizeKeywordList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .flatMap((item) => String(item).split(','))
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await dbConnect();
@@ -18,6 +36,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     if (!product) {
       return NextResponse.json({ message: 'Product not found' }, { status: 404 });
     }
+
+    // eslint-disable-next-line no-console
+    console.debug('[API] GET /api/products/[id] product:', {
+      id,
+      features: product.features,
+    });
 
     return NextResponse.json(product);
   } catch (error: any) {
@@ -47,6 +71,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
     const stock = Math.max(0, stockValue);
     const inStock = typeof body?.inStock === 'boolean' ? body.inStock : stock > 0;
+    const features = normalizeKeywordList(body?.features);
+
+    // eslint-disable-next-line no-console
+    console.debug('[API] PUT /api/products/[id] normalized features:', {
+      id,
+      featuresInput: body?.features,
+      normalizedFeatures: features,
+    });
 
     const updatePayload: any = {
       title: body.title,
@@ -54,7 +86,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       price: body.price,
       images: body.images,
       description: body.description,
-      features: body.features,
+      features,
       specs: body.specs,
       compatibility: body.compatibility,
       rating: body.rating,
@@ -84,6 +116,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (!product) {
       return NextResponse.json({ message: 'Product not found' }, { status: 404 });
     }
+
+    // eslint-disable-next-line no-console
+    console.debug('[API] PUT /api/products/[id] saved document:', {
+      id: product._id,
+      features: product.features,
+    });
 
     return NextResponse.json(product);
   } catch (error: any) {
