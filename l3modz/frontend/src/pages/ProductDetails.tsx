@@ -29,19 +29,20 @@ function extractCaption(title: string): string {
   return caption.trim();
 }
 
-function splitKeywords(keywords: unknown): string[] {
-  if (Array.isArray(keywords)) {
-    return keywords.map((keyword) => String(keyword).trim()).filter(Boolean);
+function getPrimaryKeyword(product: any): string {
+  const productName = typeof product?.name === 'string' ? product.name.trim() : '';
+  if (productName) return productName;
+
+  const keywordsValue = product?.keywords ?? [];
+  if (Array.isArray(keywordsValue)) {
+    return typeof keywordsValue[0] === 'string' ? keywordsValue[0].trim() : String(keywordsValue[0] || '').trim();
   }
 
-  if (typeof keywords === 'string') {
-    return keywords
-      .split(/\s*,\s*/)
-      .map((keyword) => keyword.trim())
-      .filter(Boolean);
+  if (typeof keywordsValue === 'string') {
+    return keywordsValue.split(',')[0]?.trim() || '';
   }
 
-  return [];
+  return extractCaption(product?.title || '');
 }
 
 export default function ProductDetails() {
@@ -76,11 +77,12 @@ export default function ProductDetails() {
     // eslint-disable-next-line no-console
     console.debug('[ProductDetails] render product data:', {
       id,
+      name: product?.name,
       features: product?.features,
       keywords: product?.keywords,
-      productKeywords: splitKeywords(product?.features ?? product?.keywords ?? []),
+      primaryKeyword: getPrimaryKeyword(product),
     });
-  }, [id, product?.features, product?.keywords]);
+  }, [id, product?.features, product?.keywords, product?.name]);
 
   if (loading) return <div className="h-96 flex justify-center items-center">Loading product...</div>;
   if (error) {
@@ -110,11 +112,7 @@ export default function ProductDetails() {
     ? product.categories
     : [];
 
-  // Extract caption from product title to show only main product name
-  const productCaption = extractCaption(product.title);
-  const productKeywords = splitKeywords(product.features ?? product.keywords ?? []);
-  const firstKeyword = productKeywords[0] || '';
-  const remainingKeywords = productKeywords.slice(1);
+  const productCaption = getPrimaryKeyword(product);
 
   const descriptionText = (product.description || 'Premium motorcycle accessory designed for maximum durability and perfect fitment.').trim();
   const descriptionPoints = descriptionText
@@ -155,20 +153,11 @@ export default function ProductDetails() {
           <StickyBuyBox product={product} productCaption={productCaption} />
         </section>
 
-        {productKeywords.length > 0 && (
+        {productCaption && (
           <section className="order-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {firstKeyword && (
-                <div className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
-                  <CheckCircle size={16} className="text-green-500 mr-2 shrink-0" />
-                  <span>{firstKeyword}</span>
-                </div>
-              )}
-              {remainingKeywords.map((keyword: string, idx: number) => (
-                <div key={`${keyword}-${idx}`} className="text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
-                  {keyword}
-                </div>
-              ))}
+            <div className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
+              <CheckCircle size={16} className="text-green-500 mr-2 shrink-0" />
+              <span>{productCaption}</span>
             </div>
           </section>
         )}
@@ -284,20 +273,11 @@ export default function ProductDetails() {
             <StickyBuyBox product={product} productCaption={productCaption} />
           </section>
 
-          {productKeywords.length > 0 && (
+          {productCaption && (
             <section>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {firstKeyword && (
-                  <div className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
-                    <CheckCircle size={16} className="text-green-500 mr-2 shrink-0" />
-                    <span>{firstKeyword}</span>
-                  </div>
-                )}
-                {remainingKeywords.map((keyword: string, idx: number) => (
-                  <div key={`${keyword}-${idx}`} className="text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
-                    {keyword}
-                  </div>
-                ))}
+              <div className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
+                <CheckCircle size={16} className="text-green-500 mr-2 shrink-0" />
+                <span>{productCaption}</span>
               </div>
             </section>
           )}
