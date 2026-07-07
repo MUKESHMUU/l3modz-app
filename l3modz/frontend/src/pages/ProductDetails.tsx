@@ -123,6 +123,9 @@ export default function ProductDetails() {
                 {productCategories.map((c: string) => <span key={c}>{c.replace('-', ' ')}</span>)}
               </div>
               <ProductTitle title={product.title} variant="hero" captionOnly={true} showTooltip={false} />
+              <div className="flex items-center space-x-4 mt-2">
+                <div className="flex items-center text-yellow-500">
+                  {Array.from({ length: 5 }).map((_, i) => (
                     <Star key={i} size={18} className={i < Math.round(product.rating || 0) ? 'fill-current' : 'text-gray-300'} />
                   ))}
                 </div>
