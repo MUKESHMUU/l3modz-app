@@ -105,10 +105,10 @@ export default function ProductDetails() {
         {product.features && product.features.length > 0 && (
           <section className="order-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {product.features.map((feat: string, idx: number) => (
+              {product.features.slice(0, 1).map((feat: string, idx: number) => (
                 <div key={idx} className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
                   <CheckCircle size={16} className="text-green-500 mr-2 shrink-0" />
-                  {feat}
+                  {feat.split(/\s*[\|–—]\s*/)[0]}
                 </div>
               ))}
             </div>
@@ -229,10 +229,10 @@ export default function ProductDetails() {
           {product.features && product.features.length > 0 && (
             <section>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {product.features.map((feat: string, idx: number) => (
+                {product.features.slice(0, 1).map((feat: string, idx: number) => (
                   <div key={idx} className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
                     <CheckCircle size={16} className="text-green-500 mr-2 shrink-0" />
-                    {feat}
+                    {feat.split(/\s*[\|–—]\s*/)[0]}
                   </div>
                 ))}
               </div>
