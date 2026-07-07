@@ -7,6 +7,7 @@ interface ProductTitleProps {
   className?: string;
   truncate?: boolean;
   showTooltip?: boolean;
+  captionOnly?: boolean;
   children?: ReactNode;
 }
 
@@ -24,6 +25,18 @@ interface ProductTitleProps {
  * - hero: Large heading on product detail page
  * - header: Mini display in navigation/dropdowns (may truncate for space)
  */
+
+/**
+ * Extract main product caption from title that contains SEO keywords
+ * Handles patterns like "Main Name | Keyword1 | Keyword2" or "Main Name – Keyword"
+ */
+function extractCaption(title: string): string {
+  const cleaned = (title || '').trim();
+  // Split by pipes or dashes and get the first part (main caption)
+  const parts = cleaned.split(/\s*[\|–—]\s*/);
+  return parts[0].trim();
+}
+
 export default function ProductTitle({
   title,
   variant = 'card',
@@ -31,10 +44,16 @@ export default function ProductTitle({
   className = '',
   truncate = false,
   showTooltip = true,
+  captionOnly = false,
   children,
 }: ProductTitleProps) {
   // Sanitize title
-  const displayTitle = (title || '').trim();
+  let displayTitle = (title || '').trim();
+  
+  // Extract only the main caption if requested
+  if (captionOnly) {
+    displayTitle = extractCaption(displayTitle);
+  }
 
   // Base styles for all variants
   const baseClasses = 'text-brand-text transition-colors';
@@ -54,13 +73,13 @@ export default function ProductTitle({
 
   // Variant-specific styles - NEVER truncate product names by default
   const variantClasses = {
-    card: 'font-medium text-sm md:text-base whitespace-normal break-words hover:text-brand-primary',
-    table: 'whitespace-normal break-words text-sm font-medium',
-    modal: 'whitespace-normal break-words font-semibold text-base block',
+    card: 'font-normal text-sm md:text-base whitespace-normal break-words hover:text-brand-primary',
+    table: 'whitespace-normal break-words text-sm font-normal',
+    modal: 'whitespace-normal break-words font-normal text-base block',
     input: 'w-full px-3 py-2 rounded-lg border border-brand-border text-sm whitespace-normal break-words',
     badge: 'text-xs font-semibold px-2 py-1 rounded-full bg-brand-primary/10 text-brand-primary whitespace-normal break-words',
-    hero: 'text-2xl sm:text-3xl md:text-[2rem] lg:text-4xl font-extrabold leading-tight tracking-tight whitespace-normal break-words',
-    header: 'text-sm font-semibold text-gray-900 whitespace-normal break-words',
+    hero: 'text-2xl sm:text-3xl md:text-[2rem] lg:text-4xl font-normal leading-tight tracking-tight whitespace-normal break-words',
+    header: 'text-sm font-normal text-gray-900 whitespace-normal break-words',
   };
 
   // Combine classes - apply truncation only if explicitly requested AND supported by variant
@@ -111,12 +130,18 @@ export function formatProductTitle(title: string, maxLength?: number): string {
 }
 
 /**
+ * Export extractCaption function for external use
+ */
+export { extractCaption };
+
+/**
  * Hook for managing product title display with tooltip
  */
 export function useProductTitle(title: string) {
   return {
     display: formatProductTitle(title),
     full: title,
+    caption: extractCaption(title),
     truncated: title && title.length > 50,
     preview: formatProductTitle(title, 50),
   };
