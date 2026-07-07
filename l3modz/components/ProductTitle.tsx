@@ -30,12 +30,38 @@ interface ProductTitleProps {
 /**
  * Extract main product caption from title that contains SEO keywords
  * Handles patterns like "Main Name | Keyword1 | Keyword2" or "Main Name – Keyword"
+ * Also handles space-separated keywords at the end
  */
 function extractCaption(title: string): string {
   const cleaned = (title || '').trim();
-  // Split by pipes or dashes and get the first part (main caption)
-  const parts = cleaned.split(/\s*[\|–—]\s*/);
-  return parts[0].trim();
+  
+  // First, split by common separators: pipe, en-dash, em-dash, comma
+  let parts = cleaned.split(/\s*[\|\-–—,]\s*/);
+  let caption = parts[0].trim();
+  
+  // If still very long, it might be keywords separated by spaces
+  // Look for patterns like "Word1 Word2 Word3 Word1 Word2..." (repeated words = keywords)
+  if (caption.split(' ').length > 8) {
+    // Try to find the main part by looking for the first repeated word
+    const words = caption.split(/\s+/);
+    let mainPart = caption;
+    
+    // If more than 8 words, likely just take the first 5-7 words as main caption
+    if (words.length > 7) {
+      // Find a good break point - look for natural boundaries
+      const possibleBreak = caption.match(/^([^|–—,]*?)(?:\s+[A-Z]|$)/);
+      if (possibleBreak) {
+        mainPart = possibleBreak[1].trim();
+      } else {
+        // Just take first 6-7 words
+        mainPart = words.slice(0, 6).join(' ');
+      }
+    }
+    
+    caption = mainPart.trim();
+  }
+  
+  return caption.trim();
 }
 
 export default function ProductTitle({
@@ -101,6 +127,7 @@ export default function ProductTitle({
         readOnly
         className={finalClasses}
         title={showTooltip ? displayTitle : undefined}
+        aria-label={displayTitle}
       />
     );
   }
@@ -113,6 +140,7 @@ export default function ProductTitle({
     <span
       className={`${finalClasses} ${wrapperClasses}`}
       title={showTooltip ? displayTitle : undefined}
+      aria-label={displayTitle}
     >
       {displayTitle}
       {children}
