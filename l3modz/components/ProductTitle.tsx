@@ -127,7 +127,6 @@ export default function ProductTitle({
         readOnly
         className={finalClasses}
         title={showTooltip ? displayTitle : undefined}
-        aria-label={displayTitle}
       />
     );
   }
@@ -140,7 +139,6 @@ export default function ProductTitle({
     <span
       className={`${finalClasses} ${wrapperClasses}`}
       title={showTooltip ? displayTitle : undefined}
-      aria-label={displayTitle}
     >
       {displayTitle}
       {children}

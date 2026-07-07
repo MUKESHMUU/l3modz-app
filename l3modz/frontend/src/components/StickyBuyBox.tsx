@@ -7,16 +7,19 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { setBuyNowItem, useCart } from '@/hooks/useCart';
 
-export default function StickyBuyBox({ product }: { product: any }) {
+export default function StickyBuyBox({ product, productCaption }: { product: any; productCaption?: string }) {
   const [qty, setQty] = useState(1);
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
+  
+  // Use provided caption or extract from title
+  const displayCaption = productCaption || product.title;
 
   const handleAddToCart = () => {
     addToCart(product, qty);
-    toast.success(`${qty} x ${product.title} added to cart`);
+    toast.success(`${qty} x ${displayCaption} added to cart`);
   };
 
   const handleBuyNow = () => {

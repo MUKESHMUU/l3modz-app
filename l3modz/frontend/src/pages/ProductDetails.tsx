@@ -6,6 +6,29 @@ import StickyBuyBox from '@/components/StickyBuyBox';
 import CompatibilityChecker from '@/components/CompatibilityChecker';
 import { Star, CheckCircle, List, Settings } from 'lucide-react';
 
+/**
+ * Extract main product caption from title that contains SEO keywords
+ */
+function extractCaption(title: string): string {
+  const cleaned = (title || '').trim();
+  const parts = cleaned.split(/\s*[\|\-–—,]\s*/);
+  let caption = parts[0].trim();
+  
+  if (caption.split(' ').length > 8) {
+    const words = caption.split(/\s+/);
+    if (words.length > 7) {
+      const possibleBreak = caption.match(/^([^|–—,]*?)(?:\s+[A-Z]|$)/);
+      if (possibleBreak) {
+        caption = possibleBreak[1].trim();
+      } else {
+        caption = words.slice(0, 6).join(' ');
+      }
+    }
+  }
+  
+  return caption.trim();
+}
+
 export default function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -62,6 +85,9 @@ export default function ProductDetails() {
     ? product.categories
     : [];
 
+  // Extract caption from product title to show only main product name
+  const productCaption = extractCaption(product.title);
+
   const descriptionText = (product.description || 'Premium motorcycle accessory designed for maximum durability and perfect fitment.').trim();
   const descriptionPoints = descriptionText
     .split(/\r?\n/)
@@ -95,7 +121,7 @@ export default function ProductDetails() {
         </section>
 
         <section className="order-3">
-          <StickyBuyBox product={product} />
+          <StickyBuyBox product={product} productCaption={productCaption} />
         </section>
 
         {product.features && product.features.length > 0 && (
@@ -219,7 +245,7 @@ export default function ProductDetails() {
           </section>
 
           <section>
-            <StickyBuyBox product={product} />
+            <StickyBuyBox product={product} productCaption={productCaption} />
           </section>
 
           {product.features && product.features.length > 0 && (
