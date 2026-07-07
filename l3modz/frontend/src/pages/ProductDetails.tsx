@@ -42,7 +42,7 @@ function getPrimaryKeyword(product: any): string {
     return keywordsValue.split(',')[0]?.trim() || '';
   }
 
-  return extractCaption(product?.title || '');
+  return typeof product?.title === 'string' ? product.title.trim() : '';
 }
 
 export default function ProductDetails() {
@@ -73,17 +73,6 @@ export default function ProductDetails() {
     if (id) fetchProduct();
   }, [id, navigate]);
 
-  useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.debug('[ProductDetails] render product data:', {
-      id,
-      name: product?.name,
-      features: product?.features,
-      keywords: product?.keywords,
-      primaryKeyword: getPrimaryKeyword(product),
-    });
-  }, [id, product?.features, product?.keywords, product?.name]);
-
   if (loading) return <div className="h-96 flex justify-center items-center">Loading product...</div>;
   if (error) {
     return (
@@ -112,7 +101,7 @@ export default function ProductDetails() {
     ? product.categories
     : [];
 
-  const productCaption = getPrimaryKeyword(product);
+  const keywordLine = getPrimaryKeyword(product);
 
   const descriptionText = (product.description || 'Premium motorcycle accessory designed for maximum durability and perfect fitment.').trim();
   const descriptionPoints = descriptionText
@@ -153,11 +142,11 @@ export default function ProductDetails() {
           <StickyBuyBox product={product} productCaption={productCaption} />
         </section>
 
-        {productCaption && (
+        {keywordLine && (
           <section className="order-4">
             <div className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
               <CheckCircle size={16} className="text-green-500 mr-2 shrink-0" />
-              <span>{productCaption}</span>
+              <span>{keywordLine}</span>
             </div>
           </section>
         )}
@@ -273,11 +262,11 @@ export default function ProductDetails() {
             <StickyBuyBox product={product} productCaption={productCaption} />
           </section>
 
-          {productCaption && (
+          {keywordLine && (
             <section>
               <div className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
                 <CheckCircle size={16} className="text-green-500 mr-2 shrink-0" />
-                <span>{productCaption}</span>
+                <span>{keywordLine}</span>
               </div>
             </section>
           )}
