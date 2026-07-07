@@ -29,6 +29,21 @@ function extractCaption(title: string): string {
   return caption.trim();
 }
 
+function splitKeywords(keywords: unknown): string[] {
+  if (Array.isArray(keywords)) {
+    return keywords.map((keyword) => String(keyword).trim()).filter(Boolean);
+  }
+
+  if (typeof keywords === 'string') {
+    return keywords
+      .split(/\s*,\s*/)
+      .map((keyword) => keyword.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
 export default function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -87,6 +102,9 @@ export default function ProductDetails() {
 
   // Extract caption from product title to show only main product name
   const productCaption = extractCaption(product.title);
+  const productKeywords = splitKeywords(product.features ?? product.keywords ?? []);
+  const firstKeyword = productKeywords[0] || '';
+  const remainingKeywords = productKeywords.slice(1);
 
   const descriptionText = (product.description || 'Premium motorcycle accessory designed for maximum durability and perfect fitment.').trim();
   const descriptionPoints = descriptionText
@@ -124,13 +142,18 @@ export default function ProductDetails() {
           <StickyBuyBox product={product} productCaption={productCaption} />
         </section>
 
-        {product.features && product.features.length > 0 && (
+        {productKeywords.length > 0 && (
           <section className="order-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {product.features.slice(0, 1).map((feat: string, idx: number) => (
-                <div key={idx} className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
+              {firstKeyword && (
+                <div className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
                   <CheckCircle size={16} className="text-green-500 mr-2 shrink-0" />
-                  {feat.split(/\s*[\|–—]\s*/)[0]}
+                  <span>{firstKeyword}</span>
+                </div>
+              )}
+              {remainingKeywords.map((keyword: string, idx: number) => (
+                <div key={`${keyword}-${idx}`} className="text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
+                  {keyword}
                 </div>
               ))}
             </div>
@@ -248,13 +271,18 @@ export default function ProductDetails() {
             <StickyBuyBox product={product} productCaption={productCaption} />
           </section>
 
-          {product.features && product.features.length > 0 && (
+          {productKeywords.length > 0 && (
             <section>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {product.features.slice(0, 1).map((feat: string, idx: number) => (
-                  <div key={idx} className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
+                {firstKeyword && (
+                  <div className="flex items-center text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
                     <CheckCircle size={16} className="text-green-500 mr-2 shrink-0" />
-                    {feat.split(/\s*[\|–—]\s*/)[0]}
+                    <span>{firstKeyword}</span>
+                  </div>
+                )}
+                {remainingKeywords.map((keyword: string, idx: number) => (
+                  <div key={`${keyword}-${idx}`} className="text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-brand-border/50">
+                    {keyword}
                   </div>
                 ))}
               </div>
