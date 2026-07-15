@@ -159,7 +159,9 @@ interface ShiprocketDiagnostics {
 }
 
 function isPaidOrder(order: Order) {
-  return !!(order.isPaid || String(order.paymentResult?.status || '').toLowerCase() === 'paid');
+  const paymentMethod = String(order.paymentMethod || '').toLowerCase();
+  const paymentStatus = String(order.paymentResult?.status || '').toLowerCase();
+  return paymentMethod === 'razorpay' && !!(order.isPaid || paymentStatus === 'paid');
 }
 
 // DEFAULT_HOME_CATEGORY_CARDS removed — categories are loaded from API at runtime
