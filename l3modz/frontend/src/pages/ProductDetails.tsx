@@ -96,7 +96,7 @@ export default function ProductDetails() {
               <div className="flex items-center space-x-2 text-sm text-brand-primary font-semibold tracking-wider uppercase mb-2">
                 {productCategories.map((c: string) => <span key={c}>{c.replace('-', ' ')}</span>)}
               </div>
-              <ProductTitle title={product.title} variant="hero" captionOnly={true} showTooltip={false} />
+              <ProductTitle title={product.title} variant="hero" showTooltip={false} />
               <div className="flex items-center space-x-4 mt-2">
                 <div className="flex items-center text-yellow-500">
                   {Array.from({ length: 5 }).map((_, i) => (
@@ -219,7 +219,7 @@ export default function ProductDetails() {
                 <div className="flex items-center space-x-2 text-sm text-brand-primary font-semibold tracking-wider uppercase mb-2">
                   {productCategories.map((c: string) => <span key={c}>{c.replace('-', ' ')}</span>)}
                 </div>
-                <ProductTitle title={product.title} variant="hero" captionOnly={true} showTooltip={false} />
+                <ProductTitle title={product.title} variant="hero" showTooltip={false} />
 
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center text-yellow-500">

@@ -158,6 +158,10 @@ interface ShiprocketDiagnostics {
   };
 }
 
+function isPaidOrder(order: Order) {
+  return !!(order.isPaid || String(order.paymentResult?.status || '').toLowerCase() === 'paid');
+}
+
 // DEFAULT_HOME_CATEGORY_CARDS removed — categories are loaded from API at runtime
 
 interface NewProductForm {
@@ -357,11 +361,13 @@ export default function AdminPanelPage() {
     const pendingOrders = orders.filter((o) => (o.status || 'Pending') === 'Pending').length;
     const shippedOrders = orders.filter((o) => (o.status || 'Pending') === 'Shipped').length;
     const confirmedOrders = orders.filter((o) => (o.status || 'Pending') === 'Confirmed').length;
+    const completedPayments = orders.filter((order) => isPaidOrder(order)).length;
     const activeProducts = products.filter((p) => p.inStock).length;
     return {
       revenue,
       orders: orders.length,
       completedOrders,
+      completedPayments,
       pendingOrders,
       shippedOrders,
       confirmedOrders,
@@ -374,6 +380,7 @@ export default function AdminPanelPage() {
   }, [orders, products, users]);
 
   const recentOrders = useMemo(() => orders.slice(0, 5), [orders]);
+  const recentCompletedPayments = useMemo(() => orders.filter((order) => isPaidOrder(order)).slice(0, 5), [orders]);
   const recentProducts = useMemo(() => products.slice(0, 5), [products]);
 
   const logout = async () => {
@@ -1325,6 +1332,7 @@ export default function AdminPanelPage() {
 
               <div className="flex flex-wrap gap-2">
                 <StatusChip label="Delivered" value={stats.completedOrders} tone="green" />
+                <StatusChip label="Paid" value={stats.completedPayments} tone="green" />
                 <StatusChip label="Confirmed" value={stats.confirmedOrders} tone="blue" />
                 <StatusChip label="Pending" value={stats.pendingOrders} tone="amber" />
                 <StatusChip label="Shipped" value={stats.shippedOrders} tone="cyan" />
@@ -1334,6 +1342,7 @@ export default function AdminPanelPage() {
 
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
                 <StatCard label="Completed Orders" value={String(stats.completedOrders)} icon={<ClipboardList size={18} />} />
+                <StatCard label="Completed Payments" value={String(stats.completedPayments)} icon={<IndianRupee size={18} />} />
                 <StatCard label="Pending Orders" value={String(stats.pendingOrders)} icon={<PackageSearch size={18} />} />
                 <StatCard label="Shipped Orders" value={String(stats.shippedOrders)} icon={<Truck size={18} />} />
                 <StatCard label="Active Products" value={String(stats.activeProducts)} icon={<Package size={18} />} />
@@ -1385,6 +1394,31 @@ export default function AdminPanelPage() {
                       </button>
                     )) : (
                       <p className="text-sm text-gray-500">No recent orders yet.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-brand-border bg-white p-6">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="font-semibold text-brand-text">Completed Payments</h3>
+                    <button className="text-sm font-semibold text-brand-primary hover:underline" onClick={() => setTab('orders')}>View all</button>
+                  </div>
+                  <div className="space-y-3">
+                    {recentCompletedPayments.length > 0 ? recentCompletedPayments.map((order) => (
+                      <button key={order._id} onClick={() => openOrderDetails(order)} className="w-full rounded-xl border border-brand-border p-3 text-left transition hover:border-brand-primary hover:bg-brand-bg">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-brand-text">{order.user?.name || order.user?.email || 'Guest'} • {order._id.slice(-8)}</p>
+                            <p className="text-xs text-gray-500">Paid {order.paidAt ? new Date(order.paidAt).toLocaleString() : new Date(order.createdAt).toLocaleString()}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-semibold text-brand-text">₹{(order.totalPrice || 0).toLocaleString('en-IN')}</p>
+                            <p className="text-xs font-semibold text-emerald-600">Completed</p>
+                          </div>
+                        </div>
+                      </button>
+                    )) : (
+                      <p className="text-sm text-gray-500">No completed payments yet.</p>
                     )}
                   </div>
                 </div>
@@ -1912,6 +1946,7 @@ export default function AdminPanelPage() {
                     <th className="px-4 py-3">Customer</th>
                     <th className="px-4 py-3">Amount</th>
                     <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Payment</th>
                     <th className="px-4 py-3">Partner</th>
                     <th className="px-4 py-3">Partner / Courier / AWB</th>
                     <th className="px-4 py-3">Date</th>
@@ -1935,6 +1970,11 @@ export default function AdminPanelPage() {
                             <option key={s} value={s}>{s}</option>
                           ))}
                         </select>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${isPaidOrder(o) ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
+                          {isPaidOrder(o) ? 'Completed' : 'Pending'}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         <select
