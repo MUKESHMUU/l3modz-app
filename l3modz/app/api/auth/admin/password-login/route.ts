@@ -3,7 +3,6 @@ import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import { comparePassword, getAuthCookieOptions, signToken } from '@/lib/auth';
 import { cookies } from 'next/headers';
-import { requireEnv } from '@/lib/env';
 import { adminLoginLimiter, getClientIdentifier } from '@/lib/rateLimit';
 import { logAdminLoginAttempt, logRateLimitViolation } from '@/lib/securityLogger';
 
@@ -39,23 +38,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'Email and password are required' }, { status: 400 });
     }
 
-    // Require environment variables in production, allow override in dev/test
-    const ADMIN_EMAIL = requireEnv('ADMIN_EMAIL');
-    const ADMIN_PASSWORD = requireEnv('ADMIN_PASSWORD');
-    const authorizedEmail = normalizeEmail(ADMIN_EMAIL);
-
     await dbConnect();
 
-    // Check credentials first before database lookup
-    if (email !== authorizedEmail || password !== ADMIN_PASSWORD) {
+    const adminUser = await User.findOne({ email, role: 'admin' });
+    if (!adminUser?.password || !(await comparePassword(password, adminUser.password))) {
       logAdminLoginAttempt(email, clientIp, false, 'Invalid credentials');
       return NextResponse.json({ message: 'Invalid admin credentials' }, { status: 401 });
-    }
-
-    const adminUser = await User.findOne({ role: 'admin' });
-    if (!adminUser) {
-      logAdminLoginAttempt(email, clientIp, false, 'Admin user not found');
-      return NextResponse.json({ message: 'Admin account not configured' }, { status: 404 });
     }
 
     const token = signToken({ id: adminUser._id, role: adminUser.role });
