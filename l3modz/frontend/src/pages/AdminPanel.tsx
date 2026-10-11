@@ -2586,7 +2586,11 @@ function ReportsPanel({ dateRange }: { dateRange: { from: string; to: string } }
             }
             const form = new FormData();
             form.append('file', file);
-            const response = await fetch('/api/admin/upload-image', { method: 'POST', credentials: 'include', body: form });
+            const response = await apiFetch('/api/admin/upload-image', {
+              method: 'POST',
+              credentials: 'include',
+              body: form,
+            });
             const data = await response.json();
             if (!response.ok || !data.url) throw new Error(data.message || `Failed to upload ${file.name}`);
             next.push(data.url);

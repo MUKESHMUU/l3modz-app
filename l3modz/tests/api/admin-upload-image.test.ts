@@ -25,7 +25,17 @@ describe('POST /api/admin/upload-image', () => {
     });
   }
 
-  it('rejects unauthorised uploads', async () => {
+  it('rejects unauthenticated uploads', async () => {
+    const { checkAdmin } = await import('@/lib/checkAuth');
+    (checkAdmin as jest.Mock).mockResolvedValue(false);
+    const { POST } = await loadRoute();
+
+    const response = await POST(requestWithFile(new Blob([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])], { type: 'image/png' })));
+
+    expect(response.status).toBe(401);
+  });
+
+  it('rejects authenticated non-admin uploads', async () => {
     const { checkAdmin } = await import('@/lib/checkAuth');
     (checkAdmin as jest.Mock).mockResolvedValue(false);
     const { POST } = await loadRoute();
