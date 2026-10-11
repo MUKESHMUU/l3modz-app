@@ -6,7 +6,7 @@ import ProductTitle from '@/components/ProductTitle';
 import { apiFetch } from '@/lib/api';
 import type { ReactNode } from 'react';
 
-type AdminTab = 'dashboard' | 'categories' | 'products' | 'orders' | 'users';
+type AdminTab = 'dashboard' | 'categories' | 'products' | 'orders' | 'users' | 'reports';
 const DELIVERY_PARTNERS = ['Shiprocket', 'India Post', 'Other'] as const;
 
 interface Product {
@@ -191,7 +191,7 @@ interface ProductEditorDraft {
   slug: string;
   price: number;
   originalPrice: number;
-  imagesText: string;
+  images: string[];
   category: string;
   description: string;
   featuresText: string;
@@ -209,6 +209,17 @@ interface CategoryOption {
   _id: string;
   name: string;
   slug: string;
+}
+
+interface AnalyticsData {
+  definition: string;
+  metrics: { orders: number; revenue: number; paidOrders: number; pending: number; activeProducts: number; outOfStockProducts: number; users: number };
+  trend: { _id: string; orders: number; revenue: number }[];
+  status: { _id: string; count: number }[];
+  payments: { _id: string; count: number }[];
+  topProducts: { _id: string; quantity: number; revenue: number }[];
+  categoryPerformance: { _id: string; quantity: number; revenue: number }[];
+  registrations: { _id: string; users: number }[];
 }
 
 export default function AdminPanelPage() {
@@ -274,6 +285,8 @@ export default function AdminPanelPage() {
   const [categoryUploadingIndex, setCategoryUploadingIndex] = useState<number | null>(null);
   const [shiprocketDiagnostics, setShiprocketDiagnostics] = useState<ShiprocketDiagnostics | null>(null);
   const [shiprocketDiagnosticsLoading, setShiprocketDiagnosticsLoading] = useState(false);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [analyticsRange, setAnalyticsRange] = useState({ from: '', to: '' });
 
   const navigate = useNavigate();
 
@@ -282,13 +295,15 @@ export default function AdminPanelPage() {
     setMessage('');
 
     try {
-      const [sessionRes, productsRes, ordersRes, usersRes, categoriesRes, diagnosticsRes] = await Promise.all([
+      const analyticsQuery = analyticsRange.from || analyticsRange.to ? `?from=${analyticsRange.from}&to=${analyticsRange.to}` : '';
+      const [sessionRes, productsRes, ordersRes, usersRes, categoriesRes, diagnosticsRes, analyticsRes] = await Promise.all([
         apiFetch('/api/admin/session', { credentials: 'include' }),
         apiFetch('/api/products', { credentials: 'include' }),
         apiFetch('/api/admin/orders', { credentials: 'include' }),
         apiFetch('/api/admin/users', { credentials: 'include' }),
         apiFetch('/api/categories', { credentials: 'include' }),
         apiFetch('/api/admin/diagnostics', { credentials: 'include' }),
+        apiFetch(`/api/admin/analytics${analyticsQuery}`, { credentials: 'include' }),
       ]);
 
       if (!sessionRes.ok) {
@@ -316,6 +331,7 @@ export default function AdminPanelPage() {
       } else {
         setShiprocketDiagnostics(null);
       }
+      if (analyticsRes.ok) setAnalytics(await analyticsRes.json());
 
       setProducts(Array.isArray(productsData) ? productsData : []);
       setOrders(Array.isArray(ordersData) ? ordersData : []);
@@ -355,16 +371,16 @@ export default function AdminPanelPage() {
   useEffect(() => {
     fetchAdminData();
     fetchAdminCategories();
-  }, []);
+  }, [analyticsRange.from, analyticsRange.to]);
 
   const stats = useMemo(() => {
-    const revenue = orders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+    const revenue = analytics?.metrics.revenue ?? orders.filter(isPaidOrder).filter((o) => o.status !== 'Cancelled').reduce((sum, o) => sum + (o.totalPrice || 0), 0);
     const completedOrders = orders.filter((o) => (o.status || 'Pending') === 'Delivered').length;
     const pendingOrders = orders.filter((o) => (o.status || 'Pending') === 'Pending').length;
     const shippedOrders = orders.filter((o) => (o.status || 'Pending') === 'Shipped').length;
     const confirmedOrders = orders.filter((o) => (o.status || 'Pending') === 'Confirmed').length;
-    const completedPayments = orders.filter((order) => isPaidOrder(order)).length;
-    const activeProducts = products.filter((p) => p.inStock).length;
+    const completedPayments = analytics?.metrics.paidOrders ?? orders.filter((order) => isPaidOrder(order)).length;
+    const activeProducts = analytics?.metrics.activeProducts ?? products.filter((p) => p.inStock && (p.stock || 0) > 0).length;
     return {
       revenue,
       orders: orders.length,
@@ -375,11 +391,11 @@ export default function AdminPanelPage() {
       confirmedOrders,
       products: products.length,
       activeProducts,
-      outOfStockProducts: products.length - activeProducts,
-      users: users.length,
+      outOfStockProducts: analytics?.metrics.outOfStockProducts ?? products.length - activeProducts,
+      users: analytics?.metrics.users ?? users.length,
       adminUsers: users.filter((u) => u.role === 'admin').length,
     };
-  }, [orders, products, users]);
+  }, [analytics, orders, products, users]);
 
   const recentOrders = useMemo(() => orders.slice(0, 5), [orders]);
   const recentCompletedPayments = useMemo(() => orders.filter((order) => isPaidOrder(order)).slice(0, 5), [orders]);
@@ -1224,10 +1240,14 @@ export default function AdminPanelPage() {
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard label="Revenue" value={`₹${stats.revenue.toLocaleString('en-IN')}`} icon={<IndianRupee size={18} />} />
         <StatCard label="Orders" value={String(stats.orders)} icon={<ShoppingBag size={18} />} />
-        <StatCard label="Products" value={String(stats.products)} icon={<PackageSearch size={18} />} />
+        <StatCard label="Paid" value={String(stats.completedPayments)} icon={<ShieldCheck size={18} />} />
+        <StatCard label="Pending" value={String(stats.pendingOrders)} icon={<Activity size={18} />} />
+        <StatCard label="Shipped / delivered" value={String(stats.shippedOrders + stats.completedOrders)} icon={<Truck size={18} />} />
+        <StatCard label="Active products" value={String(stats.activeProducts)} icon={<PackageSearch size={18} />} />
+        <StatCard label="Out of stock" value={String(stats.outOfStockProducts)} icon={<PackageSearch size={18} />} />
         <StatCard label="Users" value={String(stats.users)} icon={<Users size={18} />} />
       </div>
 
@@ -1237,6 +1257,7 @@ export default function AdminPanelPage() {
         <TabButton active={tab === 'products'} onClick={() => setTab('products')}>Products</TabButton>
         <TabButton active={tab === 'orders'} onClick={() => setTab('orders')}>Orders</TabButton>
         <TabButton active={tab === 'users'} onClick={() => setTab('users')}>Users</TabButton>
+        <TabButton active={tab === 'reports'} onClick={() => setTab('reports')}>Reports</TabButton>
       </div>
 
       {message && <p className="mb-4 rounded-xl border border-brand-border bg-white px-4 py-3 text-sm text-gray-700">{message}</p>}
@@ -1247,6 +1268,28 @@ export default function AdminPanelPage() {
         <>
           {tab === 'dashboard' && (
             <div className="space-y-4">
+              <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-brand-border bg-white p-4">
+                <label className="text-xs font-semibold text-gray-600">From<input type="date" value={analyticsRange.from} onChange={(e) => setAnalyticsRange((range) => ({ ...range, from: e.target.value }))} className="mt-1 block rounded-lg border border-brand-border px-3 py-2 text-sm" /></label>
+                <label className="text-xs font-semibold text-gray-600">To<input type="date" value={analyticsRange.to} onChange={(e) => setAnalyticsRange((range) => ({ ...range, to: e.target.value }))} className="mt-1 block rounded-lg border border-brand-border px-3 py-2 text-sm" /></label>
+                <p className="text-xs text-gray-500">{analytics?.definition || 'Revenue is calculated from verified paid, non-cancelled orders.'}</p>
+              </div>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <ChartCard title="Revenue and orders">
+                  {analytics?.trend.length ? <div className="space-y-2">{analytics.trend.slice(-14).map((point) => {
+                    const max = Math.max(...analytics.trend.map((item) => item.revenue), 1);
+                    return <div key={point._id} className="grid grid-cols-[4.5rem_1fr_4rem] items-center gap-2 text-xs"><span className="text-gray-500">{point._id.slice(5)}</span><div className="h-3 rounded-full bg-slate-100"><div className="h-3 rounded-full bg-brand-primary" style={{ width: `${Math.max(2, point.revenue / max * 100)}%` }} /></div><span className="text-right font-semibold">₹{Math.round(point.revenue).toLocaleString('en-IN')}</span></div>;
+                  })}</div> : <EmptyState label="No orders in this range" />}
+                </ChartCard>
+                <ChartCard title="Order status">
+                  {analytics?.status.length ? <div className="grid grid-cols-2 gap-3">{analytics.status.map((item) => <div key={item._id} className="rounded-xl bg-brand-bg p-3"><p className="text-xs text-gray-500">{item._id}</p><p className="mt-1 text-xl font-bold">{item.count}</p></div>)}</div> : <EmptyState label="No status data" />}
+                </ChartCard>
+                <ChartCard title="Best-selling products">
+                  {analytics?.topProducts.length ? <div className="space-y-2">{analytics.topProducts.slice(0, 6).map((item) => <div key={item._id} className="flex justify-between gap-3 border-b border-brand-border pb-2 text-sm"><span className="truncate">{item._id}</span><span className="font-semibold">{item.quantity} sold</span></div>)}</div> : <EmptyState label="No product sales yet" />}
+                </ChartCard>
+                <ChartCard title="Inventory health">
+                  <div className="flex items-center gap-6"><div className="h-28 w-28 rounded-full" style={{ background: `conic-gradient(#0f766e ${stats.activeProducts / Math.max(stats.products, 1) * 100}%, #e2e8f0 0)` }}><div className="m-3 flex h-20 w-20 items-center justify-center rounded-full bg-white text-xl font-bold">{stats.products}</div></div><div className="space-y-2 text-sm"><p><span className="mr-2 inline-block h-2 w-2 rounded-full bg-brand-primary" />Active: {stats.activeProducts}</p><p><span className="mr-2 inline-block h-2 w-2 rounded-full bg-slate-200" />Out of stock: {stats.outOfStockProducts}</p></div></div>
+                </ChartCard>
+              </div>
               <div className="rounded-2xl border border-brand-border bg-white p-6">
                 <h2 className="text-lg font-semibold">Management Summary</h2>
                 <p className="mt-2 text-sm text-gray-600">Use Products to edit stock/pricing, Orders to update fulfillment status, and Users to monitor registered accounts.</p>
@@ -1272,6 +1315,7 @@ export default function AdminPanelPage() {
                         ) : (
                           <ShieldAlert size={18} className="text-red-600" />
                         )}
+
                         <h3 className="font-semibold text-brand-text">Authentication</h3>
                       </div>
                       <div className="mt-3 space-y-2 text-sm text-gray-700">
@@ -2086,6 +2130,8 @@ export default function AdminPanelPage() {
             </div>
           )}
 
+          {tab === 'reports' && <ReportsPanel dateRange={analyticsRange} />}
+
           {selectedProduct && productModalMode && (
             <Modal onClose={closeProductDetails} title={productModalMode === 'edit' ? 'Edit Product Details' : 'Product Details'}>
               <div className="grid gap-6 lg:grid-cols-2">
@@ -2140,7 +2186,7 @@ export default function AdminPanelPage() {
                   <div className="rounded-2xl border border-brand-border bg-white p-4">
                     <h4 className="mb-3 font-semibold text-brand-text">Images</h4>
                     {productModalMode === 'edit' && productDraft ? (
-                      <textarea value={productDraft.imagesText} onChange={(e) => setProductDraft({ ...productDraft, imagesText: e.target.value })} rows={5} className="w-full rounded-lg border border-brand-border px-3 py-2 text-xs" placeholder="One image URL per line" />
+                      <ProductImageGallery images={productDraft.images} onChange={(images) => setProductDraft({ ...productDraft, images })} />
                     ) : (
                       <div className="grid grid-cols-2 gap-2">
                         {(selectedProduct.images || []).map((img, idx) => (
@@ -2480,6 +2526,96 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
+function ChartCard({ title, children }: { title: string; children: ReactNode }) {
+  return <section className="rounded-2xl border border-brand-border bg-white p-5"><h2 className="mb-4 text-base font-semibold">{title}</h2>{children}</section>;
+}
+
+function EmptyState({ label }: { label: string }) {
+  return <div className="rounded-xl border border-dashed border-brand-border p-6 text-center text-sm text-gray-500">{label}</div>;
+}
+
+function ReportsPanel({ dateRange }: { dateRange: { from: string; to: string } }) {
+  const [reportType, setReportType] = useState('orders');
+  const [downloading, setDownloading] = useState(false);
+  const download = async () => {
+    setDownloading(true);
+    try {
+      const query = new URLSearchParams({ type: reportType });
+      if (dateRange.from) query.set('from', dateRange.from);
+      if (dateRange.to) query.set('to', dateRange.to);
+      const response = await fetch(`/api/admin/reports?${query.toString()}`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Report generation failed');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `l3modz-${reportType}-report.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setDownloading(false);
+    }
+  };
+  return <section className="rounded-2xl border border-brand-border bg-white p-5">
+    <h2 className="text-lg font-semibold">Reports and exports</h2>
+    <p className="mt-1 text-sm text-gray-500">Exports use the selected date range and include the complete filtered dataset, not just the visible table page.</p>
+    <div className="mt-5 flex flex-wrap items-end gap-3">
+      <label className="text-xs font-semibold text-gray-600">Report<select value={reportType} onChange={(e) => setReportType(e.target.value)} className="mt-1 block rounded-lg border border-brand-border px-3 py-2 text-sm">
+        <option value="orders">Orders</option><option value="sales">Sales / revenue</option><option value="payments">Payments</option><option value="products">Products</option><option value="inventory">Inventory</option><option value="categories">Categories</option><option value="users">Users</option>
+      </select></label>
+      <Button onClick={download} disabled={downloading}>{downloading ? 'Generating...' : 'Download CSV'}</Button>
+    </div>
+    <p className="mt-4 text-xs text-gray-500">Generated securely by the admin-only API. Passwords, tokens, and address data are never included.</p>
+  </section>;
+}
+
+  function ProductImageGallery({ images, onChange }: { images: string[]; onChange: (images: string[]) => void }) {
+      const [busy, setBusy] = useState(false);
+      const [error, setError] = useState('');
+      const upload = async (files: FileList | null) => {
+        if (!files?.length) return;
+        setBusy(true);
+        setError('');
+        try {
+          const next = [...images];
+          for (const file of Array.from(files)) {
+            if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 8 * 1024 * 1024) {
+              throw new Error('Use JPG, PNG, or WEBP files up to 8MB each.');
+            }
+            const form = new FormData();
+            form.append('file', file);
+            const response = await fetch('/api/admin/upload-image', { method: 'POST', credentials: 'include', body: form });
+            const data = await response.json();
+            if (!response.ok || !data.url) throw new Error(data.message || `Failed to upload ${file.name}`);
+            next.push(data.url);
+          }
+          onChange(next);
+        } catch (uploadError) {
+          setError(uploadError instanceof Error ? uploadError.message : 'Image upload failed');
+        } finally {
+          setBusy(false);
+        }
+      };
+      const move = (from: number, to: number) => {
+        if (to < 0 || to >= images.length) return;
+        const next = [...images];
+        const [item] = next.splice(from, 1);
+        next.splice(to, 0, item);
+        onChange(next);
+      };
+      return <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-gray-500">First image is primary. Drag cards to reorder or use the arrow controls.</p>
+          <label className="cursor-pointer rounded-lg bg-brand-primary px-3 py-2 text-xs font-semibold text-white">{busy ? 'Uploading...' : 'Add images'}<input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={(e) => upload(e.target.files)} disabled={busy} /></label>
+        </div>
+        {error && <p className="rounded-lg bg-red-50 p-2 text-xs text-red-700">{error}</p>}
+        {images.length ? <div className="grid gap-3 sm:grid-cols-2">{images.map((image, index) => <div key={`${image}-${index}`} draggable onDragStart={(e) => e.dataTransfer.setData('text/plain', String(index))} onDragOver={(e) => e.preventDefault()} onDrop={(e) => move(Number(e.dataTransfer.getData('text/plain')), index)} className="rounded-xl border border-brand-border bg-brand-bg p-2">
+          <img src={image} alt={`Product image ${index + 1}`} className="h-28 w-full rounded-lg object-cover" />
+          <div className="mt-2 flex items-center justify-between gap-2 text-xs"><span className="font-semibold">{index === 0 ? 'Primary image' : `Image ${index + 1}`}</span><button type="button" className="text-red-600" onClick={() => { if (images.length === 1) { setError('Keep at least one product image.'); return; } onChange(images.filter((_, itemIndex) => itemIndex !== index)); }}>Remove</button></div>
+          <div className="mt-2 flex gap-1"><button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => move(index, index - 1)} disabled={index === 0}>Move left</button><button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => move(index, index + 1)} disabled={index === images.length - 1}>Move right</button></div>
+        </div>)}</div> : <EmptyState label="Add at least one product image" />}
+      </div>;
+  }
 function buildProductDraft(product: Product): ProductEditorDraft {
   const categoryValue =
     product.categoryId && typeof product.categoryId !== 'string'
@@ -2493,7 +2629,7 @@ function buildProductDraft(product: Product): ProductEditorDraft {
     slug: product.slug || '',
     price: Number(product.price) || 0,
     originalPrice: Number(product.originalPrice) || 0,
-    imagesText: (product.images || []).join('\n'),
+    images: product.images || [],
     category: categoryValue || '',
     description: product.description || '',
     featuresText: (product.features || []).join(', '),
@@ -2512,10 +2648,7 @@ function buildProductDraft(product: Product): ProductEditorDraft {
 }
 
 function buildProductPayload(draft: ProductEditorDraft, categoryId?: string | null) {
-  const images = draft.imagesText
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
+  const images = draft.images.map((line) => line.trim()).filter(Boolean);
 
   const features = normalizeKeywordList(draft.featuresText);
 
