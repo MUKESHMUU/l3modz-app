@@ -84,7 +84,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       title: body.title,
       slug: body.slug,
       price: body.price,
-      images: body.images,
       description: body.description,
       features,
       specs: body.specs,
@@ -97,6 +96,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     if (Object.prototype.hasOwnProperty.call(body, 'originalPrice')) {
       updatePayload.originalPrice = Number(body.originalPrice);
+    }
+    if (Object.prototype.hasOwnProperty.call(body, 'images')) {
+      updatePayload.images = Array.isArray(body.images) ? body.images : [];
     }
 
     if (Object.prototype.hasOwnProperty.call(body, 'categoryId')) {

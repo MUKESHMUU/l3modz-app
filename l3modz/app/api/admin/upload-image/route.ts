@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import cloudinary from '@/lib/cloudinary';
 import { checkAdmin } from '@/lib/checkAuth';
+import { uploadImageToR2 } from '@/lib/r2';
 
 export const runtime = 'nodejs';
 
@@ -31,27 +31,10 @@ export async function POST(req: Request) {
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+    const scope = formData.get('scope') === 'categories' ? 'categories' : 'products';
+    const uploadResult = await uploadImageToR2(buffer, file.type, scope);
 
-    const uploadResult = await new Promise<any>((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          folder: 'l3modz/products',
-          resource_type: 'image',
-          overwrite: false,
-        },
-        (error, result) => {
-          if (error) return reject(error);
-          resolve(result);
-        }
-      );
-
-      stream.end(buffer);
-    });
-
-    return NextResponse.json({
-      url: uploadResult.secure_url,
-      publicId: uploadResult.public_id,
-    });
+    return NextResponse.json(uploadResult);
   } catch (error: any) {
     return NextResponse.json({ message: error.message || 'Image upload failed' }, { status: 500 });
   }

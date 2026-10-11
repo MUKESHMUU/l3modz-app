@@ -19,7 +19,6 @@ export async function PUT(req: Request, { params }: Params) {
     const body = await req.json();
 
     const name = String(body?.name || '').trim();
-    const image = String(body?.image || '').trim();
     const description = String(body?.description || '').trim();
 
     if (!name) {
@@ -53,8 +52,9 @@ export async function PUT(req: Request, { params }: Params) {
       category.slug = exists ? `${newSlug}-2` : newSlug;
     }
 
-    // Allow updating image and description freely
-    category.image = image;
+    if (Object.prototype.hasOwnProperty.call(body, 'image')) {
+      category.image = String(body.image || '').trim();
+    }
     category.description = description;
     await category.save();
 

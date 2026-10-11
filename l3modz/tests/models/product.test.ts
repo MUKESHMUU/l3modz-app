@@ -30,7 +30,12 @@ describe('Product Model', () => {
   });
 
   it('sets categoryId to null when category is deleted', async () => {
-    const mockProduct = {
+    const mockProduct: {
+      _id: mongoose.Types.ObjectId;
+      title: string;
+      categoryId: mongoose.Types.ObjectId | null;
+      save: jest.Mock;
+    } = {
       _id: new mongoose.Types.ObjectId(),
       title: 'Footrest',
       categoryId: categoryId,
@@ -144,5 +149,19 @@ describe('Product Model', () => {
     expect(mockProduct.categoryId).toBeNull();
     expect(mockProduct.price).toBe(500);
     expect(mockProduct.specs.sku).toBe('SKU123');
+  });
+
+  it('preserves an R2 URL in the compatible string image array', () => {
+    const mockProduct = {
+      images: [
+        'https://images.l3modz.com/products/example.png',
+        'https://res.cloudinary.com/legacy/example.jpg',
+      ],
+    };
+
+    expect(mockProduct.images).toEqual([
+      'https://images.l3modz.com/products/example.png',
+      'https://res.cloudinary.com/legacy/example.jpg',
+    ]);
   });
 });

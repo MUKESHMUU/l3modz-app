@@ -878,6 +878,7 @@ export default function AdminPanelPage() {
     try {
       const form = new FormData();
       form.append('file', file);
+      form.append('scope', 'categories');
 
       const res = await apiFetch('/api/admin/upload-image', {
         method: 'POST',
@@ -889,7 +890,7 @@ export default function AdminPanelPage() {
       if (!res.ok) throw new Error(data.message || 'Category image upload failed');
 
       updateCategoryCard(index, { image: data.url });
-      setMessage('Category image uploaded to Cloudinary. Save card to publish.');
+      setMessage('Category image uploaded to R2. Save card to publish.');
     } catch (err: any) {
       setMessage(err.message || 'Category image upload failed');
     } finally {
@@ -912,6 +913,7 @@ export default function AdminPanelPage() {
     try {
       const form = new FormData();
       form.append('file', file);
+      form.append('scope', 'products');
 
       const res = await apiFetch('/api/admin/upload-image', {
         method: 'POST',
@@ -923,7 +925,7 @@ export default function AdminPanelPage() {
       if (!res.ok) throw new Error(data.message || 'Image upload failed');
 
       updateNewImageAt(index, data.url);
-      setMessage('Image uploaded to Cloudinary and URL added.');
+      setMessage('Image uploaded to R2 and URL added.');
     } catch (err: any) {
       setMessage(err.message || 'Image upload failed');
     } finally {
@@ -1589,7 +1591,7 @@ export default function AdminPanelPage() {
                 </div>
 
                 <p className="mt-3 text-xs text-gray-500">
-                  These cards control Home page Shop by Category images and links. Image upload uses Cloudinary via admin upload API.
+                  These cards control Home page Shop by Category images and links. Image upload uses Cloudflare R2 via the admin upload API.
                 </p>
               </div>
 
@@ -1779,7 +1781,7 @@ export default function AdminPanelPage() {
                   Field guide: Selling Price = current sale price, MRP = strikethrough/original price, Rating = stars on product card/detail, No. of Reviews = review count shown near stars, SKU = internal product code.
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
-                  Image plan: paste URL manually or use Upload to auto-send image to Cloudinary and fill URL.
+                  Image plan: paste URL manually or use Upload to send image to Cloudflare R2 and fill the returned URL.
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
                   Recommended image size: 1600x1000 px (or 2400x1500 px) with 8:5 ratio for best product page fit and zoom clarity.
@@ -2549,7 +2551,7 @@ function ReportsPanel({ dateRange }: { dateRange: { from: string; to: string } }
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `l3modz-${reportType}-report.csv`;
+      link.download = `l3modz-${reportType}-report-${new Date().toISOString().slice(0, 10)}.xlsx`;
       link.click();
       URL.revokeObjectURL(url);
     } finally {
@@ -2563,7 +2565,7 @@ function ReportsPanel({ dateRange }: { dateRange: { from: string; to: string } }
       <label className="text-xs font-semibold text-gray-600">Report<select value={reportType} onChange={(e) => setReportType(e.target.value)} className="mt-1 block rounded-lg border border-brand-border px-3 py-2 text-sm">
         <option value="orders">Orders</option><option value="sales">Sales / revenue</option><option value="payments">Payments</option><option value="products">Products</option><option value="inventory">Inventory</option><option value="categories">Categories</option><option value="users">Users</option>
       </select></label>
-      <Button onClick={download} disabled={downloading}>{downloading ? 'Generating...' : 'Download CSV'}</Button>
+      <Button onClick={download} disabled={downloading}>{downloading ? 'Generating...' : 'Download Excel'}</Button>
     </div>
     <p className="mt-4 text-xs text-gray-500">Generated securely by the admin-only API. Passwords, tokens, and address data are never included.</p>
   </section>;

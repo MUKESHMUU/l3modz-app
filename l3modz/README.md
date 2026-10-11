@@ -34,7 +34,19 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
    Fill in your actual values in `.env.local`
 
-4. **Run the development server**
+   ## Read-only image inventory
+
+   The image migration CLI is available in the runtime dependencies for one-off inventory runs. From an authorized backend shell where the live `MONGODB_URI` is already configured, run:
+
+   ```bash
+   cd l3modz && npm run migrate:images -- --dry-run
+   ```
+
+   This mode reads MongoDB and checks image sources only. It does not upload to R2, update MongoDB, or write a migration manifest. Do not use `--local-env` for the live inventory.
+
+   For an Atlas SRV DNS issue, optionally set `MIGRATION_DNS_SERVERS` to comma-separated DNS server IP addresses. This affects only the migration process; it does not change website DNS behavior. The URI must explicitly include the intended database name (currently `test`); the migration does not add or rewrite it.
+
+   4. **Run the development server**
 
    ```bash
    npm run dev

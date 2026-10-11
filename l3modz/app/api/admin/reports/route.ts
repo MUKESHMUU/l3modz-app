@@ -5,12 +5,9 @@ import Order from '@/models/Order';
 import Product from '@/models/Product';
 import User from '@/models/User';
 import Category from '@/models/Category';
+import { createReportWorkbook, getReportFilename } from '@/lib/reportWorkbook';
 
 export const runtime = 'nodejs';
-
-function csvCell(value: unknown) {
-  return `"${String(value ?? '').replace(/"/g, '""')}"`;
-}
 
 export async function GET(request: Request) {
   try {
@@ -44,11 +41,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: 'Unsupported report type' }, { status: 400 });
     }
 
-    const body = [headers, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n');
+    const body = await createReportWorkbook(type, headers, rows);
     return new NextResponse(body, {
       headers: {
-        'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="l3modz-${type}-report-${new Date().toISOString().slice(0, 10)}.csv"`,
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename="${getReportFilename(type)}"`,
         'Cache-Control': 'no-store',
       },
     });

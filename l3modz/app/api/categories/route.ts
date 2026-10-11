@@ -28,7 +28,6 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const name = String(body?.name || '').trim();
-    const image = String(body?.image || '').trim();
     const description = String(body?.description || '').trim();
 
     if (!name) {
@@ -56,12 +55,16 @@ export async function POST(req: Request) {
       counter += 1;
     }
 
-    const category = await Category.create({
+    const categoryData: Record<string, string> = {
       name,
       slug: slugToUse,
-      image,
       description,
-    });
+    };
+    if (Object.prototype.hasOwnProperty.call(body, 'image')) {
+      categoryData.image = String(body.image || '').trim();
+    }
+
+    const category = await Category.create(categoryData);
 
     return NextResponse.json(category, { status: 201 });
   } catch (error: unknown) {
