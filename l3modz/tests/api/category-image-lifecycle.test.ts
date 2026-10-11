@@ -19,6 +19,7 @@ jest.mock('@/models/Category', () => ({
   __esModule: true,
   default: {
     findById: jest.fn(),
+    findByIdAndUpdate: jest.fn(),
     findOne: jest.fn(),
     find: jest.fn(),
   },
@@ -31,10 +32,10 @@ describe('category image replacement lifecycle', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     category.image = existingImage;
-    category.save.mockResolvedValue(category);
     (Category.findById as jest.Mock)
       .mockResolvedValueOnce(category)
       .mockResolvedValueOnce({ ...category, image: replacementImage });
+    (Category.findByIdAndUpdate as jest.Mock).mockResolvedValue({ ...category, image: replacementImage });
     (Category.findOne as jest.Mock).mockResolvedValue(null);
     (Category.find as jest.Mock).mockReturnValue({
       select: jest.fn().mockReturnValue({
@@ -60,8 +61,11 @@ describe('category image replacement lifecycle', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(category.image).toBe(replacementImage);
-    expect(category.save).toHaveBeenCalledTimes(1);
+    expect(Category.findByIdAndUpdate).toHaveBeenCalledWith(
+      'category-1',
+      { $set: expect.objectContaining({ image: replacementImage }) },
+      { new: true, runValidators: true },
+    );
 
     const reloaded = await GET();
     expect(reloaded.status).toBe(200);
@@ -77,6 +81,7 @@ describe('category image replacement lifecycle', () => {
   it('rejects a local or empty value from overwriting an existing R2 image', async () => {
     category.image = replacementImage;
     (Category.findById as jest.Mock).mockReset().mockResolvedValue(category);
+    (Category.findByIdAndUpdate as jest.Mock).mockReset();
 
     const response = await PUT(
       new Request('http://localhost/api/categories/category-1', {
@@ -92,6 +97,6 @@ describe('category image replacement lifecycle', () => {
     );
 
     expect(response.status).toBe(400);
-    expect(category.save).not.toHaveBeenCalled();
+    expect(Category.findByIdAndUpdate).not.toHaveBeenCalled();
   });
 });

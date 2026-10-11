@@ -39,9 +39,10 @@ export async function PUT(req: Request, { params }: Params) {
       return NextResponse.json({ message: 'Category not found' }, { status: 404 });
     }
 
+    let slug = category.slug;
+
     // If name changed, regenerate slug server-side and ensure uniqueness
     if (body.name && body.name !== category.name) {
-      category.name = name;
       let newSlug = name
         .toLowerCase()
         .trim()
@@ -50,9 +51,14 @@ export async function PUT(req: Request, { params }: Params) {
       if (!newSlug) newSlug = 'category';
 
       const exists = await Category.findOne({ slug: newSlug, _id: { $ne: category._id } });
-      category.slug = exists ? `${newSlug}-2` : newSlug;
+      slug = exists ? `${newSlug}-2` : newSlug;
     }
 
+    const update: Record<string, string> = {
+      name,
+      slug,
+      description,
+    };
     if (Object.prototype.hasOwnProperty.call(body, 'image')) {
       const image = String(body.image || '').trim();
       if (hasNewCloudinaryUrl(image, String(category.image || ''))) {
@@ -61,10 +67,16 @@ export async function PUT(req: Request, { params }: Params) {
       if (isR2ImageUrl(String(category.image || '')) && !isR2ImageUrl(image)) {
         return NextResponse.json({ message: 'An existing R2 category image cannot be replaced with a local or empty path' }, { status: 400 });
       }
-      category.image = image;
+      update.image = image;
     }
-    category.description = description;
-    await category.save();
+    const updatedCategory = await Category.findByIdAndUpdate(
+      id,
+      { $set: update },
+      { new: true, runValidators: true },
+    );
+    if (!updatedCategory) {
+      return NextResponse.json({ message: 'Category was not found after saving' }, { status: 404 });
+    }
 
     const persistedCategory = await Category.findById(id);
     if (!persistedCategory) {
