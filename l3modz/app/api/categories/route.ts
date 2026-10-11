@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Category from '@/models/Category';
 import { checkAdmin } from '@/lib/checkAuth';
-import { isCloudinaryUrl } from '@/lib/imageUrls';
+import { isCloudinaryUrl, publicImageUrl } from '@/lib/imageUrls';
 
 export async function GET() {
   try {
@@ -11,7 +11,10 @@ export async function GET() {
       .select('_id name slug image description')
       .sort({ createdAt: 1 })
       .lean();
-    return NextResponse.json(Array.isArray(categories) ? categories : [], {
+    const publicCategories = Array.isArray(categories)
+      ? categories.map((category) => ({ ...category, image: publicImageUrl(category.image) }))
+      : [];
+    return NextResponse.json(publicCategories, {
       headers: { 'Cache-Control': 'no-store' },
     });
   } catch (error: unknown) {
@@ -73,7 +76,8 @@ export async function POST(req: Request) {
 
     const category = await Category.create(categoryData);
 
-    return NextResponse.json(category, { status: 201 });
+    const serializedCategory = typeof category.toObject === 'function' ? category.toObject() : category;
+    return NextResponse.json({ ...serializedCategory, image: publicImageUrl(category.image) }, { status: 201 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to create category';
     return NextResponse.json({ message }, { status: 500 });

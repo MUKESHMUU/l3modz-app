@@ -9,3 +9,12 @@ export function isCloudinaryUrl(value: string) {
 export function hasNewCloudinaryUrl(value: string, existingValue?: string) {
   return isCloudinaryUrl(value) && value !== existingValue;
 }
+
+export function publicImageUrl(value: unknown) {
+  const image = String(value || '').trim();
+  return isCloudinaryUrl(image) ? '' : image;
+}
+
+export function publicImageUrls(values: unknown) {
+  return Array.isArray(values) ? values.map(publicImageUrl).filter(Boolean) : [];
+}

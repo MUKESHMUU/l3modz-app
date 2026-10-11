@@ -4,7 +4,7 @@ import dbConnect from '@/lib/mongodb';
 import Category from '@/models/Category';
 import Product from '@/models/Product';
 import { checkAdmin } from '@/lib/checkAuth';
-import { hasNewCloudinaryUrl } from '@/lib/imageUrls';
+import { hasNewCloudinaryUrl, publicImageUrl } from '@/lib/imageUrls';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -67,7 +67,8 @@ export async function PUT(req: Request, { params }: Params) {
       return NextResponse.json({ message: 'Category not found' }, { status: 404 });
     }
 
-    return NextResponse.json(category);
+    const serializedCategory = typeof category.toObject === 'function' ? category.toObject() : category;
+    return NextResponse.json({ ...serializedCategory, image: publicImageUrl(category.image) });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to update category';
     return NextResponse.json({ message }, { status: 500 });

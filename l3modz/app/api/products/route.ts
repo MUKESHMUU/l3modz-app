@@ -4,7 +4,7 @@ import dbConnect from '@/lib/mongodb';
 import Product from '@/models/Product';
 import Category from '@/models/Category';
 import { checkAdmin } from '@/lib/checkAuth';
-import { isCloudinaryUrl } from '@/lib/imageUrls';
+import { isCloudinaryUrl, publicImageUrls } from '@/lib/imageUrls';
 
 function normalizeKeywordList(value: unknown): string[] {
   if (Array.isArray(value)) {
@@ -91,7 +91,10 @@ export async function GET(req: Request) {
       firstProductFeatures: Array.isArray(products) && products[0] ? products[0].features : undefined,
     });
 
-    return NextResponse.json(Array.isArray(products) ? products : []);
+    const publicProducts = Array.isArray(products)
+      ? products.map((product) => ({ ...product, images: publicImageUrls(product.images) }))
+      : [];
+    return NextResponse.json(publicProducts);
   } catch (error: any) {
     return NextResponse.json({ message: 'Failed to load products' }, { status: 500 });
   }
@@ -146,7 +149,7 @@ export async function POST(req: Request) {
     });
 
     const created = await Product.findById(product._id).populate('categoryId', 'name slug').lean();
-    return NextResponse.json(created, { status: 201 });
+    return NextResponse.json(created ? { ...created, images: publicImageUrls(created.images) } : created, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ message: 'Failed to create product' }, { status: 500 });
   }

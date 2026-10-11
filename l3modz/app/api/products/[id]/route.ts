@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import Product from '@/models/Product';
 import { checkAdmin } from '@/lib/checkAuth';
-import { hasNewCloudinaryUrl } from '@/lib/imageUrls';
+import { hasNewCloudinaryUrl, publicImageUrls } from '@/lib/imageUrls';
 
 function normalizeKeywordList(value: unknown): string[] {
   if (Array.isArray(value)) {
@@ -44,7 +44,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       features: product.features,
     });
 
-    return NextResponse.json(product);
+    const serializedProduct = typeof product.toObject === 'function' ? product.toObject() : product;
+    return NextResponse.json({ ...serializedProduct, images: publicImageUrls(product.images) });
   } catch (error: any) {
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
@@ -134,7 +135,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       features: product.features,
     });
 
-    return NextResponse.json(product);
+    const serializedProduct = typeof product.toObject === 'function' ? product.toObject() : product;
+    return NextResponse.json({ ...serializedProduct, images: publicImageUrls(product.images) });
   } catch (error: any) {
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
