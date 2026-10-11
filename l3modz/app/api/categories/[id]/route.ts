@@ -63,12 +63,19 @@ export async function PUT(req: Request, { params }: Params) {
     category.description = description;
     await category.save();
 
-    if (!category) {
-      return NextResponse.json({ message: 'Category not found' }, { status: 404 });
+    const persistedCategory = await Category.findById(id).lean();
+    if (!persistedCategory) {
+      return NextResponse.json({ message: 'Category was not found after saving' }, { status: 404 });
+    }
+    if (Object.prototype.hasOwnProperty.call(body, 'image') &&
+      String(persistedCategory.image || '').trim() !== String(body.image || '').trim()) {
+      return NextResponse.json({ message: 'Category image was not persisted; no success was reported' }, { status: 500 });
     }
 
-    const serializedCategory = typeof category.toObject === 'function' ? category.toObject() : category;
-    return NextResponse.json({ ...serializedCategory, image: publicImageUrl(category.image) });
+    return NextResponse.json({
+      ...persistedCategory,
+      image: publicImageUrl(persistedCategory.image),
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to update category';
     return NextResponse.json({ message }, { status: 500 });

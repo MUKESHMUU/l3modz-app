@@ -32,7 +32,11 @@ describe('category image replacement lifecycle', () => {
     jest.clearAllMocks();
     category.image = existingImage;
     category.save.mockResolvedValue(category);
-    (Category.findById as jest.Mock).mockResolvedValue(category);
+    (Category.findById as jest.Mock)
+      .mockResolvedValueOnce(category)
+      .mockReturnValue({
+        lean: jest.fn().mockResolvedValue({ ...category, image: replacementImage }),
+      });
     (Category.findOne as jest.Mock).mockResolvedValue(null);
     (Category.find as jest.Mock).mockReturnValue({
       select: jest.fn().mockReturnValue({

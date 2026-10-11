@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { checkAdmin } from '@/lib/checkAuth';
 import { uploadImageToR2 } from '@/lib/r2';
+import { publicImageUrl } from '@/lib/imageUrls';
 
 export const runtime = 'nodejs';
 
@@ -33,8 +34,12 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(bytes);
     const scope = formData.get('scope') === 'categories' ? 'categories' : 'products';
     const uploadResult = await uploadImageToR2(buffer, file.type, scope);
+    const publicUrl = publicImageUrl(uploadResult?.url);
+    if (!publicUrl || !publicUrl.startsWith(`https://images.l3modz.com/${scope}/`)) {
+      return NextResponse.json({ message: 'Image upload did not return a valid R2 URL' }, { status: 502 });
+    }
 
-    return NextResponse.json(uploadResult);
+    return NextResponse.json({ ...uploadResult, url: publicUrl });
   } catch (error: any) {
     return NextResponse.json({ message: error.message || 'Image upload failed' }, { status: 500 });
   }
