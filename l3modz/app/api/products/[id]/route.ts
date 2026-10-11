@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import Product from '@/models/Product';
 import { checkAdmin } from '@/lib/checkAuth';
+import { hasNewCloudinaryUrl } from '@/lib/imageUrls';
 
 function normalizeKeywordList(value: unknown): string[] {
   if (Array.isArray(value)) {
@@ -59,6 +60,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     await dbConnect();
     const id = (await params).id;
     const body = await req.json();
+    const currentProduct = Object.prototype.hasOwnProperty.call(body, 'images')
+      ? await Product.findById(id).select('images').lean()
+      : null;
+    if (Array.isArray(body.images) && body.images.some((image: unknown) =>
+      hasNewCloudinaryUrl(String(image), currentProduct?.images?.includes(String(image)) ? String(image) : undefined)
+    )) {
+      return NextResponse.json({ message: 'New product images must use the R2 upload endpoint' }, { status: 400 });
+    }
     // Debug: log incoming body for update requests to trace originalPrice handling
     // Note: Keep logs minimal in production
     // eslint-disable-next-line no-console

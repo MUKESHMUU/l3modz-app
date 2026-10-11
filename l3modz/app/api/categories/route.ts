@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Category from '@/models/Category';
 import { checkAdmin } from '@/lib/checkAuth';
+import { isCloudinaryUrl } from '@/lib/imageUrls';
 
 export async function GET() {
   try {
@@ -10,7 +11,9 @@ export async function GET() {
       .select('_id name slug image description')
       .sort({ createdAt: 1 })
       .lean();
-    return NextResponse.json(Array.isArray(categories) ? categories : []);
+    return NextResponse.json(Array.isArray(categories) ? categories : [], {
+      headers: { 'Cache-Control': 'no-store' },
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch categories';
     return NextResponse.json({ message }, { status: 500 });
@@ -29,9 +32,13 @@ export async function POST(req: Request) {
 
     const name = String(body?.name || '').trim();
     const description = String(body?.description || '').trim();
+    const image = String(body?.image || '').trim();
 
     if (!name) {
       return NextResponse.json({ message: 'Category name is required' }, { status: 400 });
+    }
+    if (isCloudinaryUrl(image)) {
+      return NextResponse.json({ message: 'New category images must use the R2 upload endpoint' }, { status: 400 });
     }
 
     const exists = await Category.findOne({ name });
@@ -61,7 +68,7 @@ export async function POST(req: Request) {
       description,
     };
     if (Object.prototype.hasOwnProperty.call(body, 'image')) {
-      categoryData.image = String(body.image || '').trim();
+      categoryData.image = image;
     }
 
     const category = await Category.create(categoryData);

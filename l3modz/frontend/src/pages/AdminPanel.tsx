@@ -301,7 +301,7 @@ export default function AdminPanelPage() {
         apiFetch('/api/products', { credentials: 'include' }),
         apiFetch('/api/admin/orders', { credentials: 'include' }),
         apiFetch('/api/admin/users', { credentials: 'include' }),
-        apiFetch('/api/categories', { credentials: 'include' }),
+        apiFetch('/api/categories', { credentials: 'include', cache: 'no-store' }),
         apiFetch('/api/admin/diagnostics', { credentials: 'include' }),
         apiFetch(`/api/admin/analytics${analyticsQuery}`, { credentials: 'include' }),
       ]);
@@ -360,7 +360,7 @@ export default function AdminPanelPage() {
   // Separate small helper to refresh admin categories (used after create/update/delete)
   const fetchAdminCategories = async () => {
     try {
-      const res = await fetch('/api/categories', { credentials: 'include' });
+      const res = await apiFetch('/api/categories', { credentials: 'include', cache: 'no-store' });
       const data = await res.json();
       setAdminCategories(Array.isArray(data) ? data : (data.data ?? []));
     } catch {

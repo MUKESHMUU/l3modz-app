@@ -68,7 +68,7 @@ describe('Categories API Routes', () => {
           _id: new mongoose.Types.ObjectId('507f1f77bcf86cd799439011'),
           name: 'Footrests',
           slug: 'footrests',
-          image: '/footrest.png',
+          image: 'https://images.l3modz.com/categories/footrest.png',
           description: 'Premium footrests',
         },
       ];
@@ -108,7 +108,7 @@ describe('Categories API Routes', () => {
       const mockBody = {
         name: 'Footrests',
         slug: 'custom-slug-from-client', // Should be ignored
-        image: '/footrest.png',
+        image: 'https://images.l3modz.com/categories/footrest.png',
         description: 'Premium footrests',
       };
 
@@ -146,7 +146,7 @@ describe('Categories API Routes', () => {
         _id: new mongoose.Types.ObjectId(),
         name: 'Footrests',
         slug: 'footrests',
-        image: '/footrest.png',
+        image: 'https://images.l3modz.com/categories/footrest.png',
         description: 'Premium footrests',
       };
 
@@ -173,6 +173,7 @@ describe('Categories API Routes', () => {
 
       expect(created.slug).toBe('footrests');
       expect(created.name).toBe('Footrests');
+      expect(created.image).toMatch(/^https:\/\/images\.l3modz\.com\/categories\//);
     });
   });
 
@@ -233,7 +234,7 @@ describe('Categories API Routes', () => {
         _id: categoryId,
         name: 'Footrests',
         slug: 'footrests',
-        image: '/old-image.png',
+        image: 'https://res.cloudinary.com/legacy/old-image.png',
         description: 'Old description',
         save: jest.fn().mockResolvedValue(undefined),
       };
@@ -243,10 +244,10 @@ describe('Categories API Routes', () => {
       const category = await mongoose.models.Category.findById(categoryId);
 
       // Update image and description without name change
-      category.image = '/new-image.png';
+      category.image = 'https://images.l3modz.com/categories/new-image.png';
       category.description = 'New description';
 
-      expect(category.image).toBe('/new-image.png');
+      expect(category.image).toMatch(/^https:\/\/images\.l3modz\.com\/categories\//);
       expect(category.description).toBe('New description');
       // Slug should remain unchanged since name didn't change
       expect(category.slug).toBe('footrests');

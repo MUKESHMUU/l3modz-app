@@ -4,6 +4,7 @@ import dbConnect from '@/lib/mongodb';
 import Category from '@/models/Category';
 import Product from '@/models/Product';
 import { checkAdmin } from '@/lib/checkAuth';
+import { hasNewCloudinaryUrl } from '@/lib/imageUrls';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -53,7 +54,11 @@ export async function PUT(req: Request, { params }: Params) {
     }
 
     if (Object.prototype.hasOwnProperty.call(body, 'image')) {
-      category.image = String(body.image || '').trim();
+      const image = String(body.image || '').trim();
+      if (hasNewCloudinaryUrl(image, category.image)) {
+        return NextResponse.json({ message: 'New category images must use the R2 upload endpoint' }, { status: 400 });
+      }
+      category.image = image;
     }
     category.description = description;
     await category.save();

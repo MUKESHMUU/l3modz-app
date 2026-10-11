@@ -23,7 +23,7 @@ export default function Home() {
       try {
         const [productsRes, categoriesRes] = await Promise.all([
           apiFetch("/api/products?limit=4"),
-          apiFetch('/api/categories'),
+          apiFetch('/api/categories', { cache: 'no-store' }),
         ]);
 
         if (productsRes.ok) {

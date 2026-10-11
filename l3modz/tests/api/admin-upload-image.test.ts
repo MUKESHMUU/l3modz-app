@@ -88,6 +88,27 @@ describe('POST /api/admin/upload-image', () => {
     );
   });
 
+  it('uploads authorised product files with the products scope', async () => {
+    const { checkAdmin } = await import('@/lib/checkAuth');
+    const { uploadImageToR2 } = await import('@/lib/r2');
+    (checkAdmin as jest.Mock).mockResolvedValue(true);
+    (uploadImageToR2 as jest.Mock).mockResolvedValue({
+      url: 'https://images.l3modz.com/products/test.png',
+      key: 'products/test.png',
+    });
+    const { POST } = await loadRoute();
+
+    const response = await POST(requestWithFile(
+      new Blob([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])], { type: 'image/png' })
+    ));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      url: 'https://images.l3modz.com/products/test.png',
+    });
+    expect(uploadImageToR2).toHaveBeenCalledWith(expect.any(Buffer), 'image/png', 'products');
+  });
+
   it('rejects a spoofed image signature', async () => {
     const { checkAdmin } = await import('@/lib/checkAuth');
     const { uploadImageToR2 } = await import('@/lib/r2');

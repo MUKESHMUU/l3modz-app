@@ -4,6 +4,7 @@ import dbConnect from '@/lib/mongodb';
 import Product from '@/models/Product';
 import Category from '@/models/Category';
 import { checkAdmin } from '@/lib/checkAuth';
+import { isCloudinaryUrl } from '@/lib/imageUrls';
 
 function normalizeKeywordList(value: unknown): string[] {
   if (Array.isArray(value)) {
@@ -123,6 +124,9 @@ export async function POST(req: Request) {
     });
     
     // expecting full product payload
+    if (Array.isArray(body?.images) && body.images.some((image: unknown) => isCloudinaryUrl(String(image)))) {
+      return NextResponse.json({ message: 'New product images must use the R2 upload endpoint' }, { status: 400 });
+    }
     const categoryId = body?.categoryId && mongoose.Types.ObjectId.isValid(body.categoryId)
       ? new mongoose.Types.ObjectId(body.categoryId)
       : null;
