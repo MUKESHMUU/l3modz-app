@@ -859,8 +859,25 @@ export default function AdminPanelPage() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to save category');
+      if (String(data?.image || '').trim() !== image) {
+        throw new Error('The server did not persist the submitted category image URL.');
+      }
 
-      setCategoryCards((prev) => prev.map((card, idx) => (idx === index ? data : card)));
+      const verifyRes = await apiFetch('/api/categories', { credentials: 'include', cache: 'no-store' });
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok) {
+        throw new Error(verifyData.message || 'Failed to verify saved category');
+      }
+      const persisted = Array.isArray(verifyData)
+        ? verifyData.find((category: HomeCategory) =>
+            data?._id ? String(category._id) === String(data._id) : category.name === name
+          )
+        : null;
+      if (!persisted || String(persisted.image || '').trim() !== image) {
+        throw new Error('The category image could not be verified after saving.');
+      }
+
+      setCategoryCards((prev) => prev.map((card, idx) => (idx === index ? persisted : card)));
       setMessage('Category card saved successfully.');
       fetchAdminCategories();
     } catch (err: any) {
@@ -1591,7 +1608,7 @@ export default function AdminPanelPage() {
                 </div>
 
                 <p className="mt-3 text-xs text-gray-500">
-                  These cards control Home page Shop by Category images and links. Image upload uses Cloudflare R2 via the admin upload API.
+                  These cards control Home page Shop by Category images and links. New image uploads use Cloudflare R2 via the admin upload API.
                 </p>
               </div>
 

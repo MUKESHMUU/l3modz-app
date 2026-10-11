@@ -7,7 +7,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 - **Database**: MongoDB with Mongoose
 - **Authentication**: JWT, bcryptjs
 - **Payments**: Razorpay
-- **Image Upload**: Cloudinary
+- **Image Upload**: Cloudflare R2
 - **Shipping**: ShipRocket
 - **Deployment**: Vercel
 
@@ -60,7 +60,7 @@ See `.env.example` for all required environment variables. You need to set up:
 
 - **MongoDB Atlas** database
 - **Razorpay** payment gateway account
-- **Cloudinary** for image uploads
+- **Cloudflare R2** for image uploads
 - **ShipRocket** for shipping
 - **JWT secrets** for authentication
 
@@ -71,7 +71,7 @@ See `.env.example` for all required environment variables. You need to set up:
 - **Frontend**: React/Vite → Deployed on **Vercel**
 - **Backend**: Next.js API → Deployed on **Render**
 - **Database**: MongoDB Atlas
-- **External Services**: Razorpay, Cloudinary, ShipRocket
+- **External Services**: Razorpay, Cloudflare R2, ShipRocket
 
 ### Step 1: Prerequisites
 
@@ -80,7 +80,7 @@ See `.env.example` for all required environment variables. You need to set up:
    - [Render](https://render.com) - for backend
    - [MongoDB Atlas](https://cloud.mongodb.com) - database
    - [Razorpay](https://razorpay.com) - payments
-   - [Cloudinary](https://cloudinary.com) - images
+   - [Cloudflare R2](https://developers.cloudflare.com/r2/) - images
    - [ShipRocket](https://shiprocket.in) - shipping
 
 2. **Connect GitHub** to both Vercel and Render
@@ -102,11 +102,11 @@ See `.env.example` for all required environment variables. You need to set up:
 3. Copy **Key ID** and **Key Secret**
 4. Note: Use test keys for development, live keys for production
 
-#### Cloudinary
+#### Cloudflare R2
 
-1. Create account at [cloudinary.com](https://cloudinary.com)
-2. Go to Dashboard
-3. Copy **Cloud Name**, **API Key**, **API Secret**
+1. Create an R2 bucket named `l3modz-products`
+2. Configure the server-side R2 credentials and `R2_PUBLIC_BASE_URL`
+3. Use the authenticated admin upload endpoint for product and category images
 
 #### ShipRocket
 
@@ -151,9 +151,7 @@ Make sure you have a `vercel.json` or `render.yaml` in `l3modz/`:
    - `NEXTAUTH_URL` - your Render backend URL (e.g., `https://l3modz-backend.onrender.com`)
    - `NEXT_PUBLIC_RAZORPAY_KEY_ID` - from Razorpay
    - `RAZORPAY_KEY_SECRET` - from Razorpay
-   - `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` - from Cloudinary
-   - `CLOUDINARY_API_KEY` - from Cloudinary
-   - `CLOUDINARY_API_SECRET` - from Cloudinary
+   - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, and `R2_PUBLIC_BASE_URL` - Cloudflare R2 image storage
    - `SHIPROCKET_EMAIL` - from ShipRocket
    - `SHIPROCKET_PASSWORD` - from ShipRocket
    - `ADMIN_SECRET` - create a random secret
