@@ -1,4 +1,4 @@
-import { hasNewCloudinaryUrl, isCloudinaryUrl, publicImageUrl, publicImageUrls } from '@/lib/imageUrls';
+import { hasNewCloudinaryUrl, isCloudinaryUrl, isR2ImageUrl, publicImageUrl, publicImageUrls } from '@/lib/imageUrls';
 
 describe('image URL policy', () => {
   it('identifies Cloudinary URLs without treating malformed values as Cloudinary', () => {
@@ -19,5 +19,12 @@ describe('image URL policy', () => {
     expect(publicImageUrl('https://images.l3modz.com/products/new.png')).toBe('https://images.l3modz.com/products/new.png');
     expect(publicImageUrls(['https://res.cloudinary.com/demo/legacy.png', 'https://images.l3modz.com/products/new.png']))
       .toEqual(['https://images.l3modz.com/products/new.png']);
+  });
+
+  it('recognizes only scoped public R2 image URLs', () => {
+    expect(isR2ImageUrl('https://images.l3modz.com/categories/keytags.png')).toBe(true);
+    expect(isR2ImageUrl('https://images.l3modz.com/products/keytags.png')).toBe(true);
+    expect(isR2ImageUrl('https://images.l3modz.com/keytags.png')).toBe(false);
+    expect(isR2ImageUrl('/accessories.png')).toBe(false);
   });
 });

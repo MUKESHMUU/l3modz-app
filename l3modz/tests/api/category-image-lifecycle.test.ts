@@ -73,4 +73,25 @@ describe('category image replacement lifecycle', () => {
       description: category.description,
     }]);
   });
+
+  it('rejects a local or empty value from overwriting an existing R2 image', async () => {
+    category.image = replacementImage;
+    (Category.findById as jest.Mock).mockReset().mockResolvedValue(category);
+
+    const response = await PUT(
+      new Request('http://localhost/api/categories/category-1', {
+        method: 'PUT',
+        body: JSON.stringify({
+          name: category.name,
+          image: '/accessories.png',
+          description: category.description,
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+      { params: Promise.resolve({ id: 'category-1' }) },
+    );
+
+    expect(response.status).toBe(400);
+    expect(category.save).not.toHaveBeenCalled();
+  });
 });

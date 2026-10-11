@@ -6,6 +6,15 @@ export function isCloudinaryUrl(value: string) {
   }
 }
 
+export function isR2ImageUrl(value: string) {
+  try {
+    return new URL(value).hostname === 'images.l3modz.com' &&
+      /^\/(products|categories)\//.test(new URL(value).pathname);
+  } catch {
+    return false;
+  }
+}
+
 export function hasNewCloudinaryUrl(value: string, existingValue?: string) {
   return isCloudinaryUrl(value) && value !== existingValue;
 }

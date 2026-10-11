@@ -4,7 +4,7 @@ import dbConnect from '@/lib/mongodb';
 import Category from '@/models/Category';
 import Product from '@/models/Product';
 import { checkAdmin } from '@/lib/checkAuth';
-import { hasNewCloudinaryUrl, publicImageUrl } from '@/lib/imageUrls';
+import { hasNewCloudinaryUrl, isR2ImageUrl, publicImageUrl } from '@/lib/imageUrls';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -55,8 +55,11 @@ export async function PUT(req: Request, { params }: Params) {
 
     if (Object.prototype.hasOwnProperty.call(body, 'image')) {
       const image = String(body.image || '').trim();
-      if (hasNewCloudinaryUrl(image, category.image)) {
+      if (hasNewCloudinaryUrl(image, String(category.image || ''))) {
         return NextResponse.json({ message: 'New category images must use the R2 upload endpoint' }, { status: 400 });
+      }
+      if (isR2ImageUrl(String(category.image || '')) && !isR2ImageUrl(image)) {
+        return NextResponse.json({ message: 'An existing R2 category image cannot be replaced with a local or empty path' }, { status: 400 });
       }
       category.image = image;
     }
