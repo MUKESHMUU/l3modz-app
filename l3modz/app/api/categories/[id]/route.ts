@@ -63,7 +63,7 @@ export async function PUT(req: Request, { params }: Params) {
     category.description = description;
     await category.save();
 
-    const persistedCategory = await Category.findById(id).lean();
+    const persistedCategory = await Category.findById(id);
     if (!persistedCategory) {
       return NextResponse.json({ message: 'Category was not found after saving' }, { status: 404 });
     }
@@ -72,8 +72,11 @@ export async function PUT(req: Request, { params }: Params) {
       return NextResponse.json({ message: 'Category image was not persisted; no success was reported' }, { status: 500 });
     }
 
+    const serializedCategory = typeof persistedCategory.toObject === 'function'
+      ? persistedCategory.toObject()
+      : persistedCategory;
     return NextResponse.json({
-      ...persistedCategory,
+      ...serializedCategory,
       image: publicImageUrl(persistedCategory.image),
     });
   } catch (error: unknown) {
